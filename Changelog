@@ -1,0 +1,22 @@
+CHANGELOG PLUGIN
+
+Version 20090903
+- Add DotForward because setuid and ftp shares the same backend
+- Support for forwarding
+- Template fixes. Needs to be finalized
+
+Version 20090826
+- Virtual backend: customizable insert and delete queries in config.php
+- test.php: testscript to test code without the Roundcube UI. Should use simpletests.org ?
+- Added vacation.pl, dbase scheme needs to be found. See also http://sourceforge.net/projects/postfixadmin/
+- 
+
+Version 20090823
+ Code changes by Jasper Slits <jaspersl@gmail.com>
+ - backend code: total rewrite to clean up code and improved support for different backends
+ - plugin code: rewrite based on hmail_autoresponder
+
+TODO
+- iframe loading
+- .forward maintenance (adding forward addresses)
+- test Virtual and setuid backends 
