@@ -1,4 +1,4 @@
-<?
+<?php
 /*
 Configuration parameters for the different backends go here
 
@@ -6,7 +6,7 @@ Configuration parameters for the different backends go here
 $config = $config['ftp'] = $config['virtual'] = $config['setuid'] = array();
 
 // Defines which backend is active
-$config['backend'] = 'virtual';
+$config['backend'] = 'ftp';
 
 /*
 	Virtual vacation. Use this with virtual users
@@ -26,15 +26,15 @@ $config['virtual']['insert_query'] = "INSERT INTO alias (email,domain,goto) VALU
 */
 
 $config['setuid']['setuid_executable'] = '/usr/bin/squirrel_stuff';
-$config['setuid']['vacation_flags'] = '-t 1'; // See man vacation for valid flags
+$config['setuid']['vacation_flags'] = ''; // See man vacation for valid flags
 
 /*
 	FTP backend parameters
 */
-$config['ftp']['server'] = 'localhost';
+$config['ftp']['server'] = 'ftp.xs4all.nl';
 $config['ftp']['passive'] = true;
 $config['ftp']['vacation_executable'] = '/usr/bin/vacation';
-$config['ftp']['vacation_flags'] = '-t 1'; // See man vacation for valid flags
+$config['ftp']['vacation_flags'] = ''; // See man vacation for valid flags
 $config['ftp']['vacation_message'] = '.vacation.msg';
 $config['ftp']['vacation_database'] = '.vacation.db';
 ?>

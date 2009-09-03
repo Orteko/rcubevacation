@@ -9,8 +9,7 @@ if (window.rcmail) {
     }, true);
  
 
-
-		   var tab = $('<span>').attr('id', 'settingstabpluginuserinfo').addClass('tablink');
+     var tab = $('<span>').attr('id', 'settingstabpluginuserinfo').addClass('tablink');
     
     var button = $('<a>').attr('href', rcmail.env.comm_path+'&_action=plugin.vacation').html(rcmail.gettext('vacation', 'vacation')).appendTo(tab);
     button.bind('click', function(e){ return rcmail.command('plugin.vacation', this) });

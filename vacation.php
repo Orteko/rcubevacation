@@ -29,11 +29,75 @@ class VacationBackendFactory {
 	}
 }
 
+// Creating/parsing a .forward file is the same for FTP and setuid backends share code
+class DotForward
+{
+        private $options = array("binary"=>"/usr/bin/vacation","username"=>"","flags"=>"","alias"=>"","forward"=>null,"localcopy"=>false);
+
+        public function setOption($key,$value)
+        {
+                $this->options[$key] = $value;
+        }
+
+        public function getContent()
+        {
+
+                if ($this->options['forward'] != null)
+                {
+                    $this->options['forward'] = ",".$this->options['forward'];
+                }
+                $a = null;
+                return sprintf('\%s%s |"%s %s %s"',$this->options['username'],
+                                $this->options['forward'],
+                                $this->options['binary'],$this->options['flags'], $a);
+        }
+
+        public function parse($dotForward)
+        {
+                $dotForward = str_replace("\"","",$dotForward);
+                $excludeArr = array("a","t","1","|","|".$this->options['binary']);
+
+                $this->options['localcopy'] = (substr($dotForward,0,1)=="\\");
+
+                                $tokenArr = array();
+                                $tok = strtok($dotForward," -\\|,");
+                                while ($tok !== false) {
+                                    $tokenArr[] = trim($tok);
+                                    $tok = strtok(" -\\,");
+                                }
+
+                                while ($element = array_shift($tokenArr))
+				{
+
+                                    if ($this->options['username']=='') {
+                                        $this->options['username'] = $element;
+                                    } else {
+                                        if ($this->options['forward']=='' && $element != "|".$this->options['binary'])
+                                        {
+                                          
+                                            $this->options['forward'] = $element;
+                                            break;
+                                        } else {
+                                            break;
+                                        }
+
+                                        
+
+                                    }
+
+                                }
+
+              return $this->options;
+        }
+
+
+}
+
 
 abstract class VacationBackend
 {
 	protected $config = array();
-	protected $rcmail,$user,$enable,$forward,$body,$subject = "";
+	protected $rcmail,$user,$enable,$forward,$body,$subject,$keepcopy = "";
 	
 	abstract protected function enable();
 	abstract protected function disable(); 
@@ -54,9 +118,18 @@ abstract class VacationBackend
 		$this->enable = (NULL != get_input_value('_vacation_enabled', RCUBE_INPUT_POST));
 		$this->subject = get_input_value('_vacation_subject', RCUBE_INPUT_POST);
 	    $this->body = get_input_value('_vacation_body', RCUBE_INPUT_POST);
+		$this->keepcopy = get_input_value('_vacation_keepcopy', RCUBE_INPUT_POST);
+		$this->forward = get_input_value('_vacation_forward', RCUBE_INPUT_POST);
 
 		// Enable or disable the vacation auto-reply
-		return ($this->enable) ? $this->enable() : $this->disable();
+		if ($this->enable)
+		{
+			return $this->enable();
+		} else {
+			return $this->disable();
+			
+		}
+
 
 	}
 	
@@ -297,7 +370,7 @@ class FTP extends VacationBackend
 	
 	private function is_active()
 	{
-		return ftp_size($this->ftp, $this->config['vacation_message']) > 0;
+		return ftp_size($this->ftp, $this->config['vacation_message']) && ftp_size($this->ftp,".forward") > 0;
 	}
 	
 	public function _get()
@@ -313,10 +386,14 @@ class FTP extends VacationBackend
 			$dot_vacation_msg = explode("\n",$this->downloadfile($this->config['vacation_message']));
 			$subject = str_replace('Subject: ','',$dot_vacation_msg[1]);
 			$body = join("\n",array_slice($dot_vacation_msg,2));
-			return array("enabled"=>true, "subject"=>$subject, "body"=>$body);
+                        $dotForwardFile = $this->downloadfile(".forward");
+                        $d = new DotForward();
+                        $options = $d->parse($dotForwardFile);
+                    
+			return array("enabled"=>true, "subject"=>$subject, "body"=>$body,"forward"=>$options['forward'],"keepcopy"=>$options['localcopy']);
 			
 		} else {
-			return array("enabled"=>false, "subject"=>"", "body"=>"");
+			return array("enabled"=>false, "subject"=>"", "body"=>"","keepcopy"=>false,"forward"=>"");
 		}
 		
 	}
@@ -402,8 +479,15 @@ class FTP extends VacationBackend
 	{
 		// Sample .forward file: 
 		//  \eric, "|/usr/bin/vacation -a allman eric"
-		$dot_forward = sprintf('\%s, |"%s %s %s"',$this->user->data['username'], 
-				$this->config['vacation_executable'], $this->config['vacation_flags'], $this->user->data['username']);
+
+                $d = new DotForward;
+                $d->setOption("binary",$this->config['vacation_executable']);
+                $d->setOption("flags",$this->config['vacation_flags']);
+                $d->setOption("username",$this->user->data['username']);
+                $d->setOption("localcopy",$this->keepcopy);
+                $d->setOption("forward",$this->forward);
+
+		$dot_forward = $d->getContent();
 		$email = $this->identity['email'];
 		$full_name = $this->identity['name'];
 
@@ -455,7 +539,7 @@ class vacation extends rcube_plugin
 	
   }
 
-  public function vacation_init()
+        public function vacation_init()
 	{
 		$this->add_texts('localization/');
 		$rcmail = rcmail::get_instance();
@@ -467,21 +551,25 @@ class vacation extends rcube_plugin
 	public function vacation_save()
 	{
 		$rcmail = rcmail::get_instance();
+               
 		if ($rv = $this->v->save() )
 		{
 			$rcmail->output->command('display_message', "Vacation succesfully changed", 'confirmation');
 		} else {
 			$rcmail->output->command('display_message', "Error occured", 'error');
 		}
-		// Call vacation_init because it initialize the plugin
-		$this->vacation_init();
+		// Call vacation_init because it initialize the plugin.
+                // TODO : If we do omit the init() we get the display_message but not the active tab
+		// $this->vacation_init();
 	}
 
 	public function vacation_form()
 	{
 		$rcmail = rcmail::get_instance();
 	//	$rcmail->output->add_script("var settings_account=true;");  
-		$settings = $this->v->_get();	;
+		$settings = $this->v->_get();
+          
+               
 
 		$rcmail->output->set_env('product_name', $rcmail->config->get('product_name'));
 		$rcmail->output->set_env('framed', true);
@@ -519,6 +607,20 @@ class vacation extends rcube_plugin
                 $field_id,
                 rep_specialchars_output($this->gettext('autoreplymessage')),
                 $input_autoresponderbody->show($settings['body']));
+			$field_id = 'vacation_keepcopy';
+			$input_autoresponderexpires = new html_checkbox(array('name' => '_vacation_keepcopy', 'id' => $field_id, 'value' => 1));
+
+			$out .= sprintf("<tr><td class=\"title\"><label for=\"%s\">%s</label>:</td><td>%s</td></tr>\n",
+	                $field_id,
+	                rep_specialchars_output($this->gettext('keepcopy')),
+	                $input_autoresponderexpires->show($settings['keepcopy']));
+			$field_id = 'vacation_forward';
+			$input_autoresponderforward = new html_textarea(array('name' => '_vacation_forward', 'id' => $field_id, 'cols' => 48, 'rows' => 1));
+
+			$out .= sprintf("<tr><td valign=\"top\" class=\"title\"><label for=\"%s\">%s</label>:</td><td>%s</td></tr>\n",
+	                $field_id,
+	                rep_specialchars_output($this->gettext('forwardingaddresses')),
+	                $input_autoresponderforward->show($settings['forward']));
 
 		    $out .= "\n</table>";
     $out .= '<br />' . "\n";
