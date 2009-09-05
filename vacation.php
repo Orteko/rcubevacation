@@ -3,13 +3,15 @@
  * Vacation plugin that adds a new tab to the settings section
  * to enable vacation message
  *
- *  Copyright (c) 2009 Peter Ruiter <peter@peterruiter.com>
+ *  Copyright (c) 2009 Jasper Slits <jaspersl@gmail.com>
  * Licensed under the GNU GPL. For full terms see the file COPYING.
  *
  * @package plugins
+ * @uses rcube_plugin
+ * @todo Documentation
+ * @todo Using config.php.default
  *
  */
-
 
 class VacationBackendFactory {
 	
@@ -23,7 +25,6 @@ class VacationBackendFactory {
 			'file' => __FILE__,
 			'message' => "Vacation plugin: Backend {$backend} does not exist"
 			),true, true);
-
 		}
   		return new $backend;
 	}
@@ -34,24 +35,33 @@ class DotForward
 {
         private $options = array("binary"=>"/usr/bin/vacation","username"=>"","flags"=>"","alias"=>"","forward"=>null,"localcopy"=>false);
 
+		// set options to be used with create()
         public function setOption($key,$value)
         {
                 $this->options[$key] = $value;
         }
 
-        public function getContent()
+		// Creates the content for the .forward file
+        public function create()
         {
-
-                if ($this->options['forward'] != null)
+                //
+                if ($this->options['forward'] != null && $this->options['forward'] != "")
                 {
                     $this->options['forward'] = ",".$this->options['forward'];
                 }
+                // Keep a local copy of the e-mail
+		if ($this->options['localcopy'] == true)
+                {
+                    $this->options['localcopy'] = "\\";
+                }
+				// No aliases yet
                 $a = null;
-                return sprintf('\%s%s |"%s %s %s"',$this->options['username'],
+                return sprintf('%s%s%s |"%s %s %s"',$this->options['localcopy'],$this->options['username'],
                                 $this->options['forward'],
                                 $this->options['binary'],$this->options['flags'], $a);
         }
 
+		/* TODO: rewrite me*/
         public function parse($dotForward)
         {
                 $dotForward = str_replace("\"","",$dotForward);
@@ -97,7 +107,8 @@ class DotForward
 abstract class VacationBackend
 {
 	protected $config = array();
-	protected $rcmail,$user,$enable,$forward,$body,$subject,$keepcopy = "";
+	protected $rcmail,$user,$forward,$body,$subject = "";
+	protected $enable,$keepcopy = false;
 	
 	abstract protected function enable();
 	abstract protected function disable(); 
@@ -114,11 +125,10 @@ abstract class VacationBackend
 	
 	final public function save()
 	{
-		
 		$this->enable = (NULL != get_input_value('_vacation_enabled', RCUBE_INPUT_POST));
 		$this->subject = get_input_value('_vacation_subject', RCUBE_INPUT_POST);
-	    $this->body = get_input_value('_vacation_body', RCUBE_INPUT_POST);
-		$this->keepcopy = get_input_value('_vacation_keepcopy', RCUBE_INPUT_POST);
+                $this->body = get_input_value('_vacation_body', RCUBE_INPUT_POST);
+		$this->keepcopy = (NULL != get_input_value('_vacation_keepcopy', RCUBE_INPUT_POST));
 		$this->forward = get_input_value('_vacation_forward', RCUBE_INPUT_POST);
 
 		// Enable or disable the vacation auto-reply
@@ -127,10 +137,7 @@ abstract class VacationBackend
 			return $this->enable();
 		} else {
 			return $this->disable();
-			
 		}
-
-
 	}
 	
 	public function __construct()
@@ -386,11 +393,11 @@ class FTP extends VacationBackend
 			$dot_vacation_msg = explode("\n",$this->downloadfile($this->config['vacation_message']));
 			$subject = str_replace('Subject: ','',$dot_vacation_msg[1]);
 			$body = join("\n",array_slice($dot_vacation_msg,2));
-                        $dotForwardFile = $this->downloadfile(".forward");
-                        $d = new DotForward();
-                        $options = $d->parse($dotForwardFile);
+			$dotForwardFile = $this->downloadfile(".forward");
+			$d = new DotForward();
+			$options = $d->parse($dotForwardFile);
                     
-			return array("enabled"=>true, "subject"=>$subject, "body"=>$body,"forward"=>$options['forward'],"keepcopy"=>$options['localcopy']);
+			return array("enabled"=>true, "subject"=>$subject, "body"=>$body,"forward"=>$options['forward'],"keepcopy"=>true);
 			
 		} else {
 			return array("enabled"=>false, "subject"=>"", "body"=>"","keepcopy"=>false,"forward"=>"");
@@ -432,7 +439,7 @@ class FTP extends VacationBackend
 		}
 		$content = file_get_contents($localFile);
 		unlink($localFile);
-		return $content;
+		return trim($content);
 	}
 	
 	public function init()
@@ -480,14 +487,12 @@ class FTP extends VacationBackend
 		// Sample .forward file: 
 		//  \eric, "|/usr/bin/vacation -a allman eric"
 
-                $d = new DotForward;
-                $d->setOption("binary",$this->config['vacation_executable']);
-                $d->setOption("flags",$this->config['vacation_flags']);
-                $d->setOption("username",$this->user->data['username']);
-                $d->setOption("localcopy",$this->keepcopy);
-                $d->setOption("forward",$this->forward);
-
-		$dot_forward = $d->getContent();
+		$d = new DotForward;
+		$d->setOption("binary",$this->config['vacation_executable']);
+		$d->setOption("flags",$this->config['vacation_flags']);
+		$d->setOption("username",$this->user->data['username']);
+		$d->setOption("localcopy",$this->keepcopy);
+		$d->setOption("forward",$this->forward);
 		$email = $this->identity['email'];
 		$full_name = $this->identity['name'];
 
@@ -498,7 +503,7 @@ class FTP extends VacationBackend
 		$vacation_header .= sprintf("Subject: %s\n\n",$this->subject);
 		$message = $vacation_header.$this->body;
 		$this->uploadfile($message,$this->config['vacation_message']);
-		$this->uploadfile($dot_forward,".forward");
+		$this->uploadfile($d->create(),".forward");
 		return true;
 	}
 
@@ -526,6 +531,8 @@ class vacation extends rcube_plugin
   
   public function init()
   {
+      // Configuration arrays are declared here but used in
+                $config = $config['ftp'] = $config['virtual'] = $config['setuid'] = array();
 		$this->add_texts('localization/', array('vacation'));
 		require_once("config.php");
 		$this->config = $config;

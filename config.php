@@ -3,7 +3,7 @@
 Configuration parameters for the different backends go here
 
 */
-$config = $config['ftp'] = $config['virtual'] = $config['setuid'] = array();
+
 
 // Defines which backend is active
 $config['backend'] = 'ftp';
@@ -31,7 +31,7 @@ $config['setuid']['vacation_flags'] = ''; // See man vacation for valid flags
 /*
 	FTP backend parameters
 */
-$config['ftp']['server'] = 'ftp.xs4all.nl';
+$config['ftp']['server'] = 'localhost';
 $config['ftp']['passive'] = true;
 $config['ftp']['vacation_executable'] = '/usr/bin/vacation';
 $config['ftp']['vacation_flags'] = ''; // See man vacation for valid flags

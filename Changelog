@@ -1,5 +1,11 @@
 CHANGELOG PLUGIN
 
+Version 20090905
+- Minor fix to setting enabled var
+- Minor fix for parse() method in DotForward
+- Changed default ftp-server to localhost
+- Moved $config Array declaration from config to VacationBackend
+
 Version 20090903
 - Add DotForward because setuid and ftp shares the same backend
 - Support for forwarding
