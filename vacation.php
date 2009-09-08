@@ -3,34 +3,33 @@
  * Vacation plugin that adds a new tab to the settings section
  * to enable vacation message
  *
- *  Copyright (c) 2009 Jasper Slits <jaspersl@gmail.com>
- * Licensed under the GNU GPL. For full terms see the file COPYING.
- *
  * @package plugins
  * @uses rcube_plugin
- * @todo Documentation
- * @todo Using config.php.default
+ * @author     Jasper Slits <jaspersl@gmail.com>
+ * @version    1.0
+ * @link       https://sourceforge.net/projects/rcubevacation/
+ * @todo       See README.TXT
  *
  */
 
-class VacationBackendFactory {
+class VacationDriverFactory {
 	
-	public static function Create( $backend )
+	public static function Create( $driver )
 	{
-		if (! class_exists($backend))
+		if (! class_exists($driver))
 		{
 			 raise_error(array(
 			'code' => 600,
 			'type' => 'php',
 			'file' => __FILE__,
-			'message' => "Vacation plugin: Backend {$backend} does not exist"
+			'message' => "Vacation plugin: Driver {$driver} does not exist"
 			),true, true);
 		}
-  		return new $backend;
+  		return new $driver;
 	}
 }
 
-// Creating/parsing a .forward file is the same for FTP and setuid backends share code
+// Creating/parsing a .forward file is the same for FTP and setuid drivers share code
 class DotForward
 {
         private $options = array("binary"=>"/usr/bin/vacation","username"=>"","flags"=>"","alias"=>"","forward"=>null,"localcopy"=>false);
@@ -104,9 +103,9 @@ class DotForward
 }
 
 
-abstract class VacationBackend
+abstract class VacationDriver
 {
-	protected $config = array();
+	protected $cfg = array();
 	protected $rcmail,$user,$forward,$body,$subject = "";
 	protected $enable,$keepcopy = false;
 	
@@ -115,12 +114,7 @@ abstract class VacationBackend
 	abstract public function _get(); 
 	abstract public function init(); 
 	
-	public function loadConfig(array $config)
-	{
-		// Load configuration based on the chosen backend
-		$this->config = $config[$config['backend']];
-		$this->init();
-	}
+	
 
 	
 	final public function save()
@@ -145,6 +139,8 @@ abstract class VacationBackend
 		$this->rcmail = rcmail::get_instance();
 		$this->user = $this->rcmail->user;
 		$this->identity = $this->user->get_identity();
+             
+                $this->cfg = $this->rcmail->config->get(strtolower(get_class($this)));
 	}
 }
 
@@ -154,76 +150,171 @@ abstract class VacationBackend
 
 */
 
-class Virtual extends VacationBackend
+class Virtual extends VacationDriver
 {
 	private $db,$domain,$goto;
 
 	private function is_active()
 	{
-		$rv = $this->_get();
-		return $rv['enabled'];
+          
+                $sql = $this->translate($this->cfg['select_query']);
+                
+		$res = $this->db->query($sql,0,0,1);
+           
+                return $this->db->num_rows($res)==1;
+		
 	}
 
 	// Substitute parameters
 	private function translate($query)
 	{
-		return str_replace(array('%e','%d','%g'),
+		return str_replace(array('%e','%d','%g','%f'),
 			array($this->user->data['username'], $this->domain,
-			Q($this->user->data['username']).$this->config['transport'],$this->domain),$query);
+			Q($this->user->data['username'])."@".$this->cfg['transport'],$this->forward),$query);
 	}
 
 	public function enable()
 	{
-			if (! $this->is_active()) {
+		if (! $this->is_active()) {
 
-			$sql = sprintf("INSERT INTO vacation (email,subject,body,domain) VALUES ('%s','%s','%s','%s')",
+			$sql = sprintf("INSERT INTO postfix.vacation (email,subject,body,domain,created) VALUES ('%s','%s','%s','%s',NOW())",
 				Q($this->user->data['username']),
 				$this->subject,
 				$this->body,
 				$this->domain
 			);
-			// Make alias
+			// Create the entry in the vacation table
 			$res = $this->db->query($sql);
-			$sql = $this->translate($this->config['insert_query']);
-			$res = $this->rcmail->db->query($sql);
+
+                        // Create an alias for the vacation transport
+                        $sql = $this->translate($this->cfg['insert_query']);
+                        $res = $this->db->query($sql);
+                        if ($this->keepcopy)
+                        {
+                            // Keep a local copy means source = destination
+                            $sql = str_replace('%g','%e',$this->cfg['insert_query']);
+                            $sql = $this->translate($sql);
+                            $this->rcmail->db->query($sql);
+                        }
+                        // Create a forwarding alias
+                        echo $this->forward;
+                        if ($this->forward != null)
+                        {
+                            $sql = str_replace('%g','%f',$this->cfg['insert_query']);
+                            $sql = $this->translate($sql);
+                            $res = $this->rcmail->db->query($sql);
+                        }
+			
 		}
 		return true;
 	}
 
 	public function disable()
 	{
-		$sql = sprintf("DELETE FROM vacation WHERE email='%s'",Q($this->user->data['username']));
+		$sql = sprintf("DELETE FROM postfix.vacation WHERE email='%s'",Q($this->user->data['username']));
 		$res = $this->db->query($sql);
-		$sql = $this->translate($this->config['delete_query']);
+		$sql = $this->translate($this->cfg['delete_query']);
 		$res = $this->rcmail->db->query($sql);
 		return true;
 	}
 
+
+        // Only recreate the configuration file if config.inc.php has been changed since
+        private function createVirtualConfig(array $dsn)
+        {
+
+        
+               $virtual_config = "/etc/postfixadmin/vacation.conf";
+
+                if (! file_exists($virtual_config) || (filemtime("plugins/vacation/config.inc.php") > filemtime($virtual_config)))
+                {
+                        
+                        // DSN parse
+                        $config = sprintf("
+        our \$db_username = '%s';\n
+        our \$db_password = '%s';\n
+        our \$db_name     = '%s';\n
+        our \$vacation_domain = '%s';\n",$dsn['username'],$dsn['password'],$dsn['database'],$this->cfg['transport']);
+                        file_put_contents($virtual_config,$config);
+                }
+        }
+
+        private function virtual_alias()
+        {
+            $forward = "";
+            $sql = sprintf("SELECT 1 FROM postfix.virtual_aliases where source = '%s' AND destination='%s'",
+            Q($this->user->data['username']),Q($this->user->data['username']));
+     
+            $res = $this->db->query($sql);
+            if ($row = $this->db->fetch_array($res))
+            {
+                $keepcopy = true;
+            }
+         
+            $goto = Q($this->user->data['username'])."@".$this->cfg['transport'];
+            $sql = sprintf("SELECT destination FROM postfix.virtual_aliases where source = '%s' AND destination NOT IN ('%s','%s')",
+            Q($this->user->data['username']),Q($this->user->data['username']),$goto);
+            
+            $res = $this->db->query($sql);
+        
+            if ($row = $this->db->fetch_assoc($res))
+            {
+                
+                $forward = $row['destination'];
+
+            }
+
+        
+
+
+            return array("forward"=>$forward,"keepcopy"=>$keepcopy);
+        }
+
 	public function _get()
 	{
-		$subject = $body = "";
-		$enabled = false;
-		$sql = sprintf("SELECT * FROM vacation WHERE email='%s' AND active=1",Q($this->user->data['username']));
-		$res = $this->db->query($sql);
+		$subject = $body = $forward = "";
+		$enabled = $keepcopy = false;
 
-		if ($row = $this->db->fetch_assoc($res))
-		{
-			$body = $row['body'];
-			$subject = $row['subject'];
-			$enabled = true; 
-		}
+                if ($this->is_active()) {
 
-		return array("enabled"=>$enabled, "subject"=>$subject, "body"=>$body);
+                    $sql = sprintf("SELECT * FROM postfix.vacation WHERE email='%s' AND active=1",Q($this->user->data['username']));
+                    $res = $this->db->query($sql);
+
+                    if ($row = $this->db->fetch_assoc($res))
+                    {
+                            $body = $row['body'];
+                            $subject = $row['subject'];
+                            $fwd = $this->virtual_alias();
+                            $keepcopy = $fwd['keepcopy'];
+                            $forward = $fwd['forward'];
+                            print_r($fwd);
+                            $enabled = true;
+                    }
+                }
+
+		return array("enabled"=>$enabled, "subject"=>$subject, "body"=>$body,"keepcopy"=>$keepcopy,"forward"=>$forward);
 	}
 
 	public function init()
 	{
+          
+
+
 	  // $res = $this->rcmail->->db points to the configured dsn in config/db.inc.php
-      $this->db = new rcube_mdb2($this->config['dsn'], '', FALSE);
-//      $this->db->set_debug((bool)$this->rcmail->config->get('sql_debug'));
-      $this->db->db_connect('r');
-	  // TODO
+          if (empty($this->cfg['dsn']))
+          {
+            $this->db = $this->rcmail->db;
+             $dsn = MDB2::parseDSN($this->rcmail->config->get('db_dsnw'));
+
+          } else {
+               $this->db = new rcube_mdb2($this->cfg['dsn'], '', FALSE);
+               $this->db->db_connect('w');
+                $dsn = MDB2::parseDSN($this->cfg['dsn']);
+          }
+    	  // TODO
 	  $this->domain = 'dummy';
+         
+            $this->createVirtualConfig($dsn);
 
 	}
 
@@ -234,13 +325,13 @@ class Virtual extends VacationBackend
 	}
 }
 
-class setuid extends VacationBackend
+class setuid extends VacationDriver
 {
 
 	private function is_active()
 	{
 		$command = sprintf("%s localhost %s %s %s %s list . %s",
-				$this->config['setuid_executable'],
+				$this->cfg['setuid_executable'],
 				Q($this->user->data['username']),
 				$this->rcmail->decrypt($_SESSION['password']),$remoteFile);
 				$result = 0;
@@ -257,7 +348,7 @@ class setuid extends VacationBackend
 		$localFile = tempnam(sys_get_temp_dir(), 'Vac');
 		file_put_contents($localFile,trim($data));
 				$command = sprintf("%s localhost %s %s %s %s put . %s",
-				$this->config['setuid_executable'],
+				$this->cfg['setuid_executable'],
 				Q($this->user->data['username']),
 				$this->rcmail->decrypt($_SESSION['password']),$remoteFile);
 				exec($command,$resArr,$result);
@@ -270,7 +361,7 @@ class setuid extends VacationBackend
 		$result = 0;
 		$localFile = tempnam(sys_get_temp_dir(), 'Vac');
 		$command = sprintf("%s localhost %s %s %s %s get . %s",
-				$this->config['setuid_executable'],
+				$this->cfg['setuid_executable'],
 				Q($this->user->data['username']),
 				$this->rcmail->decrypt($_SESSION['password']),$remoteFile);
 		exec($command,$resArr,$result);
@@ -287,7 +378,7 @@ class setuid extends VacationBackend
 	{
 		if ($this->is_active())
 		{
-			$dot_vacation_msg = explode("\n",$this->downloadfile($this->config['vacation_message']));
+			$dot_vacation_msg = explode("\n",$this->downloadfile($this->cfg['vacation_message']));
 			$subject = str_replace('Subject: ','',$dot_vacation_msg[1]);
 			$body = join("\n",array_slice($dot_vacation_msg,2));
 			return array("enabled"=>false, "subject"=>$subject, "body"=>$body);
@@ -300,26 +391,26 @@ class setuid extends VacationBackend
 	{
 		return true;
 
-		if (! is_executable($this->config['setuid_executable']))
+		if (! is_executable($this->cfg['setuid_executable']))
 		{
 			 raise_error(array(
         'code' => 600,
         'type' => 'php',
         'file' => __FILE__,
-        'message' => "Vacation plugin: {$this->config['setuid_executable']} does not exist or is not an executable"
+        'message' => "Vacation plugin: {$this->cfg['setuid_executable']} does not exist or is not an executable"
         ),true, true);
 
 
 		} else {
 			// Setuid ?
-			$fstat = stat($this->config['setuid_executable']);
+			$fstat = stat($this->cfg['setuid_executable']);
 			if (! $fstat['mode'] & 0004000)
 			{
 				 raise_error(array(
         'code' => 600,
         'type' => 'php',
         'file' => __FILE__,
-        'message' => "Vacation plugin: {$this->config['setuid_executable']} has no setuid bit"
+        'message' => "Vacation plugin: {$this->cfg['setuid_executable']} has no setuid bit"
         ),true, true);
 			
 			}
@@ -337,7 +428,7 @@ class setuid extends VacationBackend
 
 
 		$command = sprintf("%s localhost %s %s %s %s delete . %s",
-				$this->config['setuid_executable'],
+				$this->cfg['setuid_executable'],
 				Q($this->user->data['username']),
 				$this->rcmail->decrypt($_SESSION['password']),$file);
 			exec($command);
@@ -354,7 +445,7 @@ class setuid extends VacationBackend
 		 $deleteFiles = array(".vacation.msg",".forward");
 		 foreach($deleteFiles as $file) {
 			$command = sprintf("%s localhost %s %s %s %s delete . %s",
-				$this->config['setuid_executable'],
+				$this->cfg['setuid_executable'],
 				Q($this->user->data['username']),
 				$this->rcmail->decrypt($_SESSION['password']),$file);
 			exec($command);
@@ -370,14 +461,14 @@ class setuid extends VacationBackend
 
 */
 
-class FTP extends VacationBackend
+class FTP extends VacationDriver
 {
 	private $ftp = false;
 
 	
 	private function is_active()
 	{
-		return ftp_size($this->ftp, $this->config['vacation_message']) && ftp_size($this->ftp,".forward") > 0;
+		return ftp_size($this->ftp, $this->cfg['vacation_message']) && ftp_size($this->ftp,".forward") > 0;
 	}
 	
 	public function _get()
@@ -390,7 +481,7 @@ class FTP extends VacationBackend
 				\n
 				Body tekst
 			*/
-			$dot_vacation_msg = explode("\n",$this->downloadfile($this->config['vacation_message']));
+			$dot_vacation_msg = explode("\n",$this->downloadfile($this->cfg['vacation_message']));
 			$subject = str_replace('Subject: ','',$dot_vacation_msg[1]);
 			$body = join("\n",array_slice($dot_vacation_msg,2));
 			$dotForwardFile = $this->downloadfile(".forward");
@@ -447,13 +538,13 @@ class FTP extends VacationBackend
 		$username = Q($this->user->data['username']);
 		$userpass = $this->rcmail->decrypt($_SESSION['password']);
 	
-		if (! $this->ftp = ftp_connect($this->config['server'],21,15))
+		if (! $this->ftp = ftp_connect($this->cfg['server'],21,15))
 		{
 			 raise_error(array(
 			'code' => 600,
 			'type' => 'php',
 			'file' => __FILE__,
-			'message' => "Vacation plugin: Cannot connect to the FTP-server {$this->config['server']}"
+			'message' => "Vacation plugin: Cannot connect to the FTP-server {$this->cfg['server']}"
 			),true, true);
 			
 		}
@@ -465,17 +556,17 @@ class FTP extends VacationBackend
 				'code' => 600,
 				'type' => 'php',
 				'file' => __FILE__,
-				'message' => "Vacation plugin: Cannot login to FTP-server {$this->config['server']} using {$username}"
+				'message' => "Vacation plugin: Cannot login to FTP-server {$this->cfg['server']} using {$username}"
 				),true, true);
 			
 		}
-		if ($this->config['passive'] && !ftp_pasv($this->ftp, TRUE))
+		if ($this->cfg['passive'] && !ftp_pasv($this->ftp, TRUE))
 		{
 			raise_error(array(
 			'code' => 600,
 			'type' => 'php',
 			'file' => __FILE__,
-			'message' => "Vacation plugin: Cannot set PASV setting on {$this->config['server']}"
+			'message' => "Vacation plugin: Cannot set PASV setting on {$this->cfg['server']}"
 			),true, true);
 		}
 	}
@@ -488,8 +579,8 @@ class FTP extends VacationBackend
 		//  \eric, "|/usr/bin/vacation -a allman eric"
 
 		$d = new DotForward;
-		$d->setOption("binary",$this->config['vacation_executable']);
-		$d->setOption("flags",$this->config['vacation_flags']);
+		$d->setOption("binary",$this->cfg['vacation_executable']);
+		$d->setOption("flags",$this->cfg['vacation_flags']);
 		$d->setOption("username",$this->user->data['username']);
 		$d->setOption("localcopy",$this->keepcopy);
 		$d->setOption("forward",$this->forward);
@@ -502,14 +593,14 @@ class FTP extends VacationBackend
 		   $vacation_header = sprintf("From: %s\n",$email);
 		$vacation_header .= sprintf("Subject: %s\n\n",$this->subject);
 		$message = $vacation_header.$this->body;
-		$this->uploadfile($message,$this->config['vacation_message']);
+		$this->uploadfile($message,$this->cfg['vacation_message']);
 		$this->uploadfile($d->create(),".forward");
 		return true;
 	}
 
 	protected function disable()
 	{
-		$this->deletefiles(array(".forward",$this->config['vacation_message'],$this->config['vacation_database']));
+		$this->deletefiles(array(".forward",$this->cfg['vacation_message'],$this->cfg['vacation_database']));
 		return true;
 	}
 	
@@ -527,17 +618,19 @@ class FTP extends VacationBackend
 class vacation extends rcube_plugin
 {
   public $task = 'settings';
-  private $v,$config = "";
+  private $v,$cfg = "";
   
   public function init()
   {
       // Configuration arrays are declared here but used in
-                $config = $config['ftp'] = $config['virtual'] = $config['setuid'] = array();
+              
 		$this->add_texts('localization/', array('vacation'));
-		require_once("config.php");
-		$this->config = $config;
-		$this->v = VacationBackendFactory::create($this->config['backend']);
-		$this->v->loadConfig($this->config);
+		$this->load_config();
+                $driver = rcmail::get_instance()->config->get("driver");
+        
+		$this->v = VacationDriverFactory::create($driver);
+                // Initialize the driver
+		$this->v->init();
 
 		$this->register_action('plugin.vacation', array($this, 'vacation_init'));
 		$this->register_action('plugin.vacation-save', array($this, 'vacation_save'));

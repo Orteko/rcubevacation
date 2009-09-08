@@ -6,7 +6,7 @@
 error_reporting(E_ALL);
 
 const RCUBE_INPUT_POST = 1;
-require 'config.php';
+require 'config.inc.php';
 require 'vacation.php';
 chdir('../../program');
 //require './lib/PEAR.php';
@@ -29,6 +29,7 @@ function Q($str)
 {
 	return $str;
 }
+
 
 
 
@@ -87,7 +88,7 @@ class rcube_plugin
 }
 
 
-$v = VacationBackendFactory::create('ftp');
+$v = VacationBackendFactory::create('virtual');
 $v->loadConfig($config);
 print_r($v->_get());
 //$v->save();

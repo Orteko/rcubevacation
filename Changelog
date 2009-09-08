@@ -1,4 +1,13 @@
-CHANGELOG PLUGIN
+CHANGELOG for the Roundcube vacation plugin
+
+Version 20090908
+- Backend -> Driver renamed and refactored
+- Loading configuration file aligned with Roundcube's native function
+- Finished SQL backend driver
+- Added database schema for vacation tables
+- Renamed config.php to config.inc.php
+- Introducing /etc/postfixadmin/vacation.conf which gets generated using config.inc.php
+- Added README.TXT with security notes and installation notes
 
 Version 20090905
 - Minor fix to setting enabled var
@@ -15,14 +24,9 @@ Version 20090826
 - Virtual backend: customizable insert and delete queries in config.php
 - test.php: testscript to test code without the Roundcube UI. Should use simpletests.org ?
 - Added vacation.pl, dbase scheme needs to be found. See also http://sourceforge.net/projects/postfixadmin/
-- 
 
 Version 20090823
  Code changes by Jasper Slits <jaspersl@gmail.com>
  - backend code: total rewrite to clean up code and improved support for different backends
  - plugin code: rewrite based on hmail_autoresponder
 
-TODO
-- iframe loading
-- .forward maintenance (adding forward addresses)
-- test Virtual and setuid backends 
