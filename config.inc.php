@@ -16,11 +16,11 @@ $rcmail_config['driver'] = 'virtual';
 // should be able to edit the Postfix user tables.
 // Specify a DSN with sufficient privileges here or leave empty so the system DSN is used.
 $rcmail_config['virtual']['dsn'] = '';
-$rcmail_config['virtual']['database'] = 'vacation';
 // Postfix server only. See http://www.postfix.org/VIRTUAL_README.html#autoreplies
 $rcmail_config['virtual']['transport'] = 'vacation.yourdomain.org';
 
-$rcmail_config['virtual']['database'] = 'postfix';
+// Database used by Postfix
+$rcmail_config['virtual']['dbase'] = 'postfix';
 // Parameters: %e = email address, %d = domain, %g = goto . The latter is used for the transport
 // %g expands to john@domain.org@vacation.yourdomain.org
 $rcmail_config['virtual']['select_query'] = "SELECT 1 FROM postfix.virtual_aliases where source='%e' AND destination='%g'";

@@ -41,9 +41,16 @@ The following drivers are available to do the low level work:
 - SQL. This driver creates entries in the vacation table in a MySQL database and modifies the alias table.
 At the moment the SQL driver is tailored towards Postfix but can be modified to suit other configurations
 
+Known bugs / limitations
+------------------------
+- SQL driver: Updating an existing vacation message in SQL driver does not work.
+- GUI: Saving settings does not redirect to vacation plugin page
+- Dutch translation improper
+
 Todo
 ----
-- more testing of all backends
+- support updating of existing vacation message
+- more testing of all driver
 - testing vacation.pl . It's a dependency hell now
 - flexible database scheme support
 - Postgresql support

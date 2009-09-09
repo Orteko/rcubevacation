@@ -1,5 +1,7 @@
 CHANGELOG for the Roundcube vacation plugin
 
+Version 20090909
+
 Version 20090908
 - Backend -> Driver renamed and refactored
 - Loading configuration file aligned with Roundcube's native function
