@@ -16,6 +16,10 @@ Licensing:
 This product is distributed under the GPL. Please read through the file
 LICENSE in Roundcube's root directory for more information about our license.
 
+Credits
+-------
+Peter Ruiter for his initial work on the plugin.
+
 
 Requirements
 ------------

@@ -198,7 +198,7 @@ class Virtual extends VacationDriver {
             $dsn = MDB2::parseDSN($this->cfg['dsn']);
         }
         // TODO Determine domain
-        $this->domain = 'dummy';
+        $this->domain = 1;
 
         $this->createVirtualConfig($dsn);
     }
@@ -208,16 +208,16 @@ class Virtual extends VacationDriver {
 	 */
     public function _get() {
         $subject = $body = "";
+        $enabled = false;
         $fwd = $this->virtual_alias();
-        if ($enabled = $this->is_active()) {
-            $sql = sprintf("SELECT body,subject FROM %s.vacation WHERE email='%s' AND active=1",
-                $this->cfg['dbase'],Q($this->user->data['username']));
-
-            $res = $this->db->query($sql);
-            if ($row = $this->db->fetch_assoc($res)) {
-                $body = $row['body'];
-                $subject = $row['subject'];
-            }
+        $sql = sprintf("SELECT body,subject FROM %s.vacation WHERE email='%s' AND active=1",
+        $this->cfg['dbase'],Q($this->user->data['username']));
+       
+        $res = $this->db->query($sql);
+        if ($row = $this->db->fetch_assoc($res)) {
+            $body = $row['body'];
+            $subject = $row['subject'];
+            $enabled = true;
         }
 
         return array("enabled"=>$enabled, "subject"=>$subject, "body"=>$body,"keepcopy"=>$fwd['keepcopy'],"forward"=>$fwd['forward']);
@@ -227,46 +227,71 @@ class Virtual extends VacationDriver {
 	 * @return boolean True on succes, false on failure 
 	 */
     public function enable() {
-        if (! $this->is_active()) {
-            $sql = sprintf("INSERT INTO %s.vacation (email,subject,body,domain,created,active) VALUES ('%s','%s','%s','%s',NOW(),1)",
+        // If there is an existing entry in the vacation table, delete it.
+        // This also triggers the cascading delete on the vacation_notification, but's ok for now.
+        // @todo: allow update statements
+
+        $sql = sprintf("DELETE FROM %s.vacation WHERE email='%s'",$this->cfg['dbase'],Q($this->user->data['username']));
+        $this->db->query($sql);
+
+        // Delete the alias to the vacation transport
+        $sql = $this->translate($this->cfg['delete_query']);
+        $this->db->query($sql);
+      
+        // (Re)enable the vacation message and the vacation transport alias
+        if ($this->enable && $this->body != "" && $this->subject != "") {
+
+
+        $sql = sprintf("INSERT INTO %s.vacation (email,subject,body,domain,created,active) VALUES ('%s','%s','%s','%s',NOW(),1)",
                 $this->cfg['dbase'],
                 Q($this->user->data['username']),
                 $this->subject,
                 $this->body,
                 $this->domain
             );
-            // Create the entry in the vacation table
-            $res = $this->db->query($sql);
-            // Create an alias for the vacation transport
-            $sql = $this->translate($this->cfg['insert_query']);
-            $res = $this->db->query($sql);
-            if ($this->keepcopy) {
-            // Keep a local copy means source = destination
+        $this->db->query($sql);
+    
+         $sql = $this->translate($this->cfg['insert_query']);
+         $this->db->query($sql);
+        }
+        $current = $this->_get();
+
+        // Keep a copy of the mail
+
+        if ($this->keepcopy != $current['keepcopy'])
+        {
+            if ($this->keepcopy)
+            {
                 $sql = str_replace('%g','%e',$this->cfg['insert_query']);
                 $sql = $this->translate($sql);
                 $this->db->query($sql);
+            } else {
+                $sql = str_replace('%g','%e',$this->cfg['delete_query']);
+                $sql = $this->translate($sql);
+                $this->db->query($sql);
             }
-
-            // Create a forwarding alias
-            if ($this->forward != null) {
+        }
+        
+        // Set a forward
+        if ($this->forward != $current['forward'])
+        {
+            $sql = str_replace('%g',$current['forward'],$this->cfg['delete_query']);
+            $sql = $this->translate($sql);
+            $this->db->query($sql);
+            if ($this->forward != null)
+            {
                 $sql = str_replace('%g','%f',$this->cfg['insert_query']);
                 $sql = $this->translate($sql);
                 $res = $this->db->query($sql);
             }
-
         }
         return true;
     }
 
-	/*Removes the aliases
-	 * 
-	 * @return boolean True on succes, false on failure 
-	 */
+    // In the enable method, we determine what needs to be done.
+    // @todo Make it look less ugly$this->cfg['delete_query']
     public function disable() {
-        $sql = sprintf("DELETE FROM %s.vacation WHERE email='%s'",$this->cfg['dbase'],Q($this->user->data['username']));
-        $res = $this->db->query($sql);
-        $sql = $this->translate($this->cfg['delete_query']);
-        $res = $this->db->query($sql);
+        $this->enable();
         return true;
     }
 
@@ -328,8 +353,9 @@ class Virtual extends VacationDriver {
         $keepcopy = $this->db->num_rows($res)==1;
 
         $goto = Q($this->user->data['username'])."@".$this->cfg['transport'];
-        $sql = sprintf("SELECT destination FROM %1\$s.virtual_aliases WHERE source = '%1\$s' AND destination NOT IN ('%1\$s','%s')",
-            $this->cfg['dbase'],Q($this->user->data['username']),$goto);
+        $sql = sprintf("SELECT destination FROM %1\$s.virtual_aliases WHERE source = '%2\$s' AND destination NOT IN ('%2\$s','%2\$s@%3\$s')",
+            $this->cfg['dbase'],Q($this->user->data['username']),$this->cfg['transport']);
+
         $res = $this->db->query($sql);
 
         if ($row = $this->db->fetch_assoc($res)) {

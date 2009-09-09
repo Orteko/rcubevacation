@@ -24,8 +24,8 @@ $rcmail_config['virtual']['dbase'] = 'postfix';
 // Parameters: %e = email address, %d = domain, %g = goto . The latter is used for the transport
 // %g expands to john@domain.org@vacation.yourdomain.org
 $rcmail_config['virtual']['select_query'] = "SELECT 1 FROM postfix.virtual_aliases where source='%e' AND destination='%g'";
-$rcmail_config['virtual']['delete_query'] = "DELETE FROM postfix.virtual_aliases WHERE domain='%d' AND goto='%g' AND email='%e' LIMIT 1";
-$rcmail_config['virtual']['insert_query'] = "INSERT INTO postfix.virtual_aliases (domain_id,source,destination) VALUES (1,'%e','%g')";
+$rcmail_config['virtual']['delete_query'] = "DELETE FROM postfix.virtual_aliases WHERE domain_id='%d' AND destination='%g' AND source='%e' LIMIT 1";
+$rcmail_config['virtual']['insert_query'] = "INSERT INTO postfix.virtual_aliases (domain_id,source,destination) VALUES (%d,'%e','%g')";
 
 /*
 	setuid backend parameters
