@@ -46,7 +46,7 @@ class Virtual extends VacationDriver {
 	/*
 	 * @return boolean True on succes, false on failure
 	 */
-    public function enable() {
+    public function setVacation() {
         // If there is an existing entry in the vacation table, delete it.
         // This also triggers the cascading delete on the vacation_notification, but's ok for now.
         // @todo: allow update statements
@@ -108,14 +108,7 @@ class Virtual extends VacationDriver {
         return true;
     }
 
-    // In the enable method, we determine what needs to be done.
-    // @todo Make it look less ugly$this->cfg['delete_query']
-    public function disable() {
-        $this->enable();
-        return true;
-    }
-
-	/*
+ 	/*
 	 * @return boolean True if an alias to the virtual transport is found, false otherwise
 	 */
     private function is_active() {

@@ -5,7 +5,7 @@
 */
 
 class DotForward {
-    private $options = array("binary"=>"/usr/bin/vacation","username"=>"","flags"=>"","alias"=>"","forward"=>null,"localcopy"=>false);
+    private $options = array("binary"=>"","username"=>"","flags"=>"","alias"=>"","enabled"=>false,"forward"=>null,"keepcopy"=>false);
 
     // set options to be used with create()
     public function setOption($key,$value) {
@@ -19,47 +19,52 @@ class DotForward {
             $this->options['forward'] = ",".$this->options['forward'];
         }
 
-        // Keep a local copy of the e-mail
-        if ($this->options['localcopy'] == true) {
-            $this->options['localcopy'] = "\\";
+        // Keep a local copy of the e-mail if we send an auto-reply
+        if ($this->options['keepcopy'] == true || $this->options['binary'] != "") {
+            $this->options['keepcopy'] = "\\";
         }
 
         // No alias support yet
         $a = null;
-        return sprintf('%s%s%s |"%s %s %s"',$this->options['localcopy'],$this->options['username'],
-        $this->options['forward'],
-        $this->options['binary'],$this->options['flags'], $a);
+
+        // If there is no binary set, we do not send an out office reply. 
+        if ($this->options['binary'] != "")
+        {
+             return sprintf('%s%s%s,|"%s %s %s"',$this->options['keepcopy'],$this->options['username'],
+            $this->options['forward'],
+         $this->options['binary'],$this->options['flags'], $a);
+
+        } else {
+            return sprintf("%s%s%s",$this->options['keepcopy'],$this->options['username'],$this->options['forward']);
+
+        }
+
+
+       
     }
 
-		/* TODO: rewrite me*/
+    
     public function parse($dotForward) {
-        $dotForward = str_replace("\"","",$dotForward);
-        $excludeArr = array("a","t","1","|","|".$this->options['binary']);
+        $this->options['keepcopy'] = (substr($dotForward,0,1)=='\\');
 
-        $this->options['localcopy'] = (substr($dotForward,0,1)=="\\");
+        
+        $dotForward =  str_replace(array("|","\"","\\"),"",$dotForward);
+        $arr = explode(",",trim($dotForward));
+        $this->options['username'] = array_shift($arr);
 
-        $tokenArr = array();
-        $tok = strtok($dotForward," -\\|,");
-        while ($tok !== false) {
-            $tokenArr[] = trim($tok);
-            $tok = strtok(" -\\,");
-        }
-
-        while ($element = array_shift($tokenArr)) {
-
-            if ($this->options['username']=='') {
-                $this->options['username'] = $element;
+        while ($next = array_shift($arr))
+        {
+             if (substr($next,0,1) == '/')
+            {
+                // For future use like parsing the flags?
+                list($this->options['binary']) = explode(" ",$next);
+                $this->options['enabled'] = true;
             } else {
-                if ($this->options['forward']=='' && $element != "|".$this->options['binary']) {
-
-                    $this->options['forward'] = $element;
-                    break;
-                } else {
-                    break;
-                }
+                $this->options['forward'] = $next;
             }
         }
-        return $this->options;
+
+       return $this->options;
     }
 }
 ?>

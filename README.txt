@@ -61,13 +61,14 @@ At the moment the SQL driver is tailored towards Postfix/MySQL but can be modifi
 Writing a new driver
 --------------------
 1) Create relevant entries in config.inc.php. The name of array key must match the class name.
-2) Have your new driver extend VacationDriver
-3) Implement abstract public methods from base class: init(), enable(),disable(),_get()
+3) Create lib/$driver.class.php
+3) Have your new driver extend VacationDriver
+4) Implement abstract public methods from base class: init(), enable(),disable(),_get()
    You can access configuration settings using $this->cfg
-   Form variables can be accessed directly using class properties, see save() method
-4) Write new private helper methods like is_active() if needed. 
-5) Test it
-6) Send a patch
+   Form variables can be accessed directly using class properties, see save() method5
+5) Write new private helper methods like is_active() if needed.
+6) Test it
+7) Submit a patch
 
 
 Known bugs / limitations
@@ -79,12 +80,11 @@ Known bugs / limitations
 
 Todo
 ----
-- more testing of all driver
+- testing setuid driver. Requires a virtual machine with Linux.
 - testing vacation.pl . It's a dependency hell now with Snow Leopard
 - flexible database scheme support
 - Postgresql support
 - LDAP support
-- rewriting the parse method in DotForward
 
 
 Credits

@@ -44,7 +44,7 @@ class setuid extends VacationDriver {
         return array("enabled"=>$enabled, "subject"=>$subject, "body"=>$body,"keepcopy"=>$keepcopy,"forward"=>$forward);
     }
 
-    public function enable() {
+    public function setVacation() {
 
 		 /*
 		 * Syntax:	squirrelmail_vacation_proxy  server user password action source destination
@@ -53,7 +53,7 @@ class setuid extends VacationDriver {
         $d->setOption("binary",$this->cfg['vacation_executable']);
         $d->setOption("flags",$this->cfg['vacation_flags']);
         $d->setOption("username",$this->user->data['username']);
-        $d->setOption("localcopy",$this->keepcopy);
+        $d->setOption("keepcopy",$this->keepcopy);
         $d->setOption("forward",$this->forward);
 
 

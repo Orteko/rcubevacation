@@ -13,6 +13,7 @@
  */
 
 
+
 require 'lib/vacationdriver.class.php';
 require 'lib/ftp.class.php';
 require 'lib/dotforward.class.php';
@@ -50,16 +51,19 @@ class vacation extends rcube_plugin {
         $rcmail = rcmail::get_instance();
 
         if ($rv = $this->v->save() ) {
-            $text = "success_enabled";
-            $rcmail->output->show_message($this->gettext($text), 'confirmation');
+            $rcmail->output->show_message($this->gettext("success_changed"), 'confirmation');
         } else {
             $rcmail->output->show_message($this->gettext("failed"), 'error');
         }
-        $this->vacation_init();
+
+      //  $this->vacation_init();
+       
+
     }
 
     public function vacation_form() {
         $rcmail = rcmail::get_instance();
+
         $settings = $this->v->_get();
 
         $rcmail->output->set_env('product_name', $rcmail->config->get('product_name'));
@@ -69,7 +73,7 @@ class vacation extends rcube_plugin {
         $attrib_str = create_attrib_string($attrib, array('style', 'class', 'id', 'cellpadding', 'cellspacing', 'border', 'summary'));
 
         // return the complete edit form as table
-        $out .= '<fieldset><legend>' . $this->gettext('autoresponder') . ' ::: ' . $rcmail->user->data['username'] . '</legend>' . "\n";
+        $out = '<fieldset><legend>' . $this->gettext('outofoffice') . ' ::: ' . $rcmail->user->data['username'] . '</legend>' . "\n";
         $out .= '<br />' . "\n";
         $out .= '<table' . $attrib_str . ">\n\n";
 
@@ -98,6 +102,12 @@ class vacation extends rcube_plugin {
             $field_id,
             rep_specialchars_output($this->gettext('autoreplymessage')),
             $input_autoresponderbody->show($settings['body']));
+            $out .= "\n</table>
+                    </fieldset>";
+        
+         $out.='<fieldset><legend>' . $this->gettext('forward') . '</legend>' . "\n";
+             $out .= '<br />' . "\n";
+        $out .= '<table' . $attrib_str . ">\n\n";
 
         // Keep a local copy of the mail
         $field_id = 'vacation_keepcopy';
@@ -118,7 +128,6 @@ class vacation extends rcube_plugin {
         $out .= "\n</table>";
         $out .= '<br />' . "\n";
         $out .= "</fieldset>\n";
-
         $rcmail->output->add_gui_object('vacationform', 'vacation-form');
         return $out;
     }

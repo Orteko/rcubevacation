@@ -44,12 +44,12 @@ class FTP extends VacationDriver {
         }
     }
 
-
+    // Download .forward and .vacation.message file
     public function _get() {
         $subject = $body = $forward = "";
         $keepcopy = false;
 
-        if ($enabled = $this->is_active()) {
+        if ($this->is_active()) {
             $dot_vacation_msg = explode("\n",$this->downloadfile($this->cfg['vacation_message']));
             $subject = str_replace('Subject: ','',$dot_vacation_msg[1]);
             $body = join("\n",array_slice($dot_vacation_msg,2));
@@ -58,37 +58,54 @@ class FTP extends VacationDriver {
             $options = $d->parse($dotForwardFile);
             $forward = $options['forward'];
             $keepcopy = $options['keepcopy'];
+            $enabled = $options['enabled'];
         }
+        
         return array("enabled"=>$enabled, "subject"=>$subject, "body"=>$body,"forward"=>$forward,"keepcopy"=>$keepcopy);
     }
 
-    protected function enable() {
-    // Sample .forward file:
-    //  \eric, "|/usr/bin/vacation -a allman eric"
+    protected function setVacation() {
+
+        // Remove existing vacation files
+        $this->disable();
 
         $d = new DotForward;
-        $d->setOption("binary",$this->cfg['vacation_executable']);
-        $d->setOption("flags",$this->cfg['vacation_flags']);
+        // Enable auto-reply?
+        if ($this->enable) {
+            $d->setOption("binary",$this->cfg['vacation_executable']);
+            $d->setOption("flags",$this->cfg['vacation_flags']);
+  
+
+            // Create the .vacation.message file
+            $email = $this->identity['email'];
+            $full_name = $this->identity['name'];
+
+            if (!empty($full_name)) {
+                $vacation_header = sprintf("From: %s <%s>\n",$full_name,$email);
+            } else {
+                $vacation_header = sprintf("From: %s\n",$email);
+            }
+            $vacation_header .= sprintf("Subject: %s\n\n",$this->subject);
+            $message = $vacation_header.$this->body;
+            $this->uploadfile($message,$this->cfg['vacation_message']);
+
+        }
         $d->setOption("username",$this->user->data['username']);
-        $d->setOption("localcopy",$this->keepcopy);
+        $d->setOption("keepcopy",$this->keepcopy);
         $d->setOption("forward",$this->forward);
 
-        $email = $this->identity['email'];
-        $full_name = $this->identity['name'];
-
-        if (!empty($full_name)) {
-            $vacation_header = sprintf("From: %s <%s>\n",$full_name,$email);
-        } else {
-            $vacation_header = sprintf("From: %s\n",$email);
+        // Do we even need to upload a .forward file?
+        if ($this->keepcopy || $this->enable || $this->forward != "")
+        {
+             $this->uploadfile($d->create(),".forward");
         }
-        $vacation_header .= sprintf("Subject: %s\n\n",$this->subject);
-        $message = $vacation_header.$this->body;
-        $this->uploadfile($message,$this->cfg['vacation_message']);
-        $this->uploadfile($d->create(),".forward");
         return true;
+
     }
 
-    protected function disable() {
+    // Cleans up files
+
+    private function disable() {
         $this->deletefiles(array(".forward",$this->cfg['vacation_message'],$this->cfg['vacation_database']));
         return true;
     }
@@ -97,14 +114,17 @@ class FTP extends VacationDriver {
 	 * @return boolean True if both .vacation.msg and .forward exist, false otherwise
 	*/
     private function is_active() {
-        return (ftp_size($this->ftp, $this->cfg['vacation_message']) > 0 && ftp_size($this->ftp,".forward") > 0);
+        return (ftp_size($this->ftp,".forward") > 0);
     }
 
     // Delete files when disabling vacation
     private function deletefiles(array $remoteFiles) {
-        foreach ($remoteFiles as $file) {
-            if (ftp_size($this->ftp, $file) == 0 || !ftp_delete($this->ftp, $file)) {
-                return false;
+        foreach ($remoteFiles as $file)
+        {
+             
+            if (ftp_size($this->ftp, $file) > 0)
+            {
+                ftp_delete($this->ftp, $file);
             }
         }
 
