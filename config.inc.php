@@ -21,12 +21,13 @@ $rcmail_config['virtual']['transport'] = 'vacation.yourdomain.org';
 
 // Database used by Postfix
 $rcmail_config['virtual']['dbase'] = 'postfix';
-// Parameters: %e = email address, %d = domain, %g = goto . The latter is used for the transport
+// Parameters: %e = email address, %d = domain,%i = domain_id, %g = goto . The latter is used for the transport
 // %g expands to john@domain.org@vacation.yourdomain.org
 $rcmail_config['virtual']['select_query'] = "SELECT 1 FROM postfix.virtual_aliases where source='%e' AND destination='%g'";
 $rcmail_config['virtual']['delete_query'] = "DELETE FROM postfix.virtual_aliases WHERE domain_id='%d' AND destination='%g' AND source='%e' LIMIT 1";
 $rcmail_config['virtual']['insert_query'] = "INSERT INTO postfix.virtual_aliases (domain_id,source,destination) VALUES (%d,'%e','%g')";
-
+// If the alias table uses domain_id (integer) rather than domain (varchar), specify a query here.
+$rcmail_config['virtual']['domain_lookup_query'] = "SELECT id as id FROM postfix.virtual_domains WHERE name='%d'";
 /*
 	setuid backend parameters
 */
