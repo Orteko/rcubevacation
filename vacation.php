@@ -3,12 +3,13 @@
  * Vacation plugin that adds a new tab to the settings section
  * to enable forward / out of office replies.
  *
- * @package		plugins
- * @uses		rcube_plugin
- * @author		Jasper Slits <jaspersl@gmail.com>
- * @version		1.1
- * @link		https://sourceforge.net/projects/rcubevacation/
- * @todo		See README.TXT
+ * @package	plugins
+ * @uses	rcube_plugin
+ * @author	Jasper Slits <jaspersl@gmail.com>
+ * @version	1.5
+ * @license     GPL
+ * @link	https://sourceforge.net/projects/rcubevacation/
+ * @todo	See README.TXT
  *
  */
 
@@ -32,18 +33,19 @@ class vacation extends rcube_plugin {
         $this->register_action('plugin.vacation', array($this, 'vacation_init'));
         $this->register_action('plugin.vacation-save', array($this, 'vacation_save'));
         $this->register_handler('plugin.vacation_form', array($this, 'vacation_form'));
-        $this->include_script('vacation.js');
+          $this->include_script('vacation.js');
 
         $this->v = VacationDriverFactory::create( $driver );
     }
 
     public function vacation_init() {
-     //   print_r("Hoi!");
+
 
         $this->add_texts('localization/',array('vacation'));
         $rcmail = rcmail::get_instance();
         $rcmail->output->set_pagetitle($this->gettext('autoresponder'));
         // Load template
+      
        $rcmail->output->send('vacation.vacation');
     }
 
@@ -54,32 +56,30 @@ class vacation extends rcube_plugin {
         $this->v->init();
        
         if ( $this->v->save() ) {
-       //    $rcmail->output->show_message($this->gettext("success_changed"), 'confirmation');
+           $rcmail->output->show_message($this->gettext("success_changed"), 'confirmation');
         } else {
-         //  $rcmail->output->show_message($this->gettext("failed"), 'error');
-       }
-        //  $rcmail->output->command('display_message', "Hoi!", 'confirmation');
-        $this->vacation_init();
-       
+           $rcmail->output->show_message($this->gettext("failed"), 'error');
+        }
 
+        $this->vacation_init();
     }
 
     public function vacation_form() {
         $rcmail = rcmail::get_instance();
 
       
-  // Initialize the driver
+        // Initialize the driver
         $this->v->init();
         $settings = $this->v->_get();
 
         $rcmail->output->add_script("var settings_account=true;");  
 
         $rcmail->output->set_env('product_name', $rcmail->config->get('product_name'));
-        $rcmail->output->set_env('framed', true);
+   
 
         // TODO: find out where $attrib should originate from. Found in the hmail_autoreply plugin code?
         $attrib_str = create_attrib_string($attrib, array('style', 'class', 'id', 'cellpadding', 'cellspacing', 'border', 'summary'));
-
+        
         // return the complete edit form as table
         $out = '<fieldset><legend>' . $this->gettext('outofoffice') . ' ::: ' . $rcmail->user->data['username'] . '</legend>' . "\n";
         $out .= '<br />' . "\n";

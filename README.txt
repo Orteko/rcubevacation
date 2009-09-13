@@ -17,7 +17,7 @@ Installation
 ------------
 1) Unzip vacation.tar.gz in plugins/ 
 2) Enable the vacation plugin in config/main.inc.php: $rcmail_config['plugins'] = array('vacation');
-3) Edit driver plugins/vacation/config.inc.php
+3) Edit plugins/vacation/config.inc.php
 4) Set $rcmail_config['driver'] and configure related settings
 
 Licensing
@@ -73,7 +73,6 @@ Writing a new driver
 
 Known bugs / limitations
 ------------------------
-- GUI: Saving settings does not redirect to vacation plugin page
 - Dutch translation is entirely accurate
 - setuid driver is largely untested
 
