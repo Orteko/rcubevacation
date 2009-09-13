@@ -3,17 +3,15 @@
 <head>
 <title><roundcube:object name="pagetitle" /></title>
 <roundcube:include file="/includes/links.html" />
-<link rel="stylesheet" type="text/css" href="/settings.css" />
+
 <script type="text/javascript" src="/functions.js"></script>
 </head>
-<body class="iframe">
+<body>
 
 <roundcube:include file="/includes/taskbar.html" />
 <roundcube:include file="/includes/header.html" />
 <roundcube:include file="/includes/settingstabs.html" />
-
-
-
+<div id="userprefs-box">
 <div id="prefs-title" class="boxtitle"><roundcube:label name="vacation.vacation" /></div>
 <form name="vacationform" action="./?_task=settings&_action=plugin.vacation-save" method="post">
 <div id="prefs-details">
@@ -26,6 +24,8 @@
 </div>
 </div>
 </form>
+</div>
+
 
 </body>
 </html>

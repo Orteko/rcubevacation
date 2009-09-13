@@ -15,11 +15,7 @@ class Virtual extends VacationDriver {
             $this->db->set_debug((bool)$this->rcmail->config->get('sql_debug'));
             $dsn = MDB2::parseDSN($this->cfg['dsn']);
         }
-        // TODO Determine domain
-
-         
-
-        $this->domain_id = $this->domainLookup();
+        
 
         $this->createVirtualConfig($dsn);
     }
@@ -53,6 +49,8 @@ class Virtual extends VacationDriver {
         // If there is an existing entry in the vacation table, delete it.
         // This also triggers the cascading delete on the vacation_notification, but's ok for now.
         // @todo: allow update statements
+
+        $this->domain_id = $this->domainLookup();
 
         $sql = sprintf("DELETE FROM %s.vacation WHERE email='%s'",$this->cfg['dbase'],Q($this->user->data['username']));
         $this->db->query($sql);
@@ -138,7 +136,7 @@ class Virtual extends VacationDriver {
             $sql = $this->translate($this->cfg['domain_lookup_query']);
             $res = $this->db->query($sql);
             $row = $this->db->fetch_array($res);
-            return $row['id'];
+            return $row[0];
         } else {
             return $domain;
         }
@@ -185,6 +183,8 @@ class Virtual extends VacationDriver {
         $keepcopy = $this->db->num_rows($res)==1;
 
         $goto = Q($this->user->data['username'])."@".$this->cfg['transport'];
+
+        // A forwarding address is not a localcopy (source = destination and not an alias to the vacation transport
         $sql = sprintf("SELECT destination FROM %1\$s.virtual_aliases WHERE source = '%2\$s' AND destination NOT IN ('%2\$s','%2\$s@%3\$s')",
             $this->cfg['dbase'],Q($this->user->data['username']),$this->cfg['transport']);
 

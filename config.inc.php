@@ -5,8 +5,8 @@ Configuration parameters for the different drivers go here
 */
 
 
-// Defines which driver is active
-$rcmail_config['driver'] = 'ftp';
+// Defines which driver is active. Valid options are: ftp, virtual or setuid
+$rcmail_config['driver'] = 'virtual';
 
 /*
 	Virtual vacation. Use this with virtual users
@@ -25,9 +25,10 @@ $rcmail_config['virtual']['dbase'] = 'postfix';
 // %g expands to john@domain.org@vacation.yourdomain.org
 $rcmail_config['virtual']['select_query'] = "SELECT 1 FROM postfix.virtual_aliases where source='%e' AND destination='%g'";
 $rcmail_config['virtual']['delete_query'] = "DELETE FROM postfix.virtual_aliases WHERE domain_id='%d' AND destination='%g' AND source='%e' LIMIT 1";
-$rcmail_config['virtual']['insert_query'] = "INSERT INTO postfix.virtual_aliases (domain_id,source,destination) VALUES (%d,'%e','%g')";
+$rcmail_config['virtual']['insert_query'] = "INSERT INTO postfix.virtual_aliases (domain_id,source,destination) VALUES (%i,'%e','%g')";
 // If the alias table uses domain_id (integer) rather than domain (varchar), specify a query here.
-$rcmail_config['virtual']['domain_lookup_query'] = "SELECT id as id FROM postfix.virtual_domains WHERE name='%d'";
+// The result will be assigned to %i
+$rcmail_config['virtual']['domain_lookup_query'] = "SELECT id FROM postfix.virtual_domains WHERE name='%d'";
 /*
 	setuid backend parameters
 */

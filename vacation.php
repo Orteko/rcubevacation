@@ -29,34 +29,37 @@ class vacation extends rcube_plugin {
         $this->load_config();
         $driver = rcmail::get_instance()->config->get("driver");
 
-        $this->v = VacationDriverFactory::create( $driver );
-        // Initialize the driver
-        $this->v->init();
-
         $this->register_action('plugin.vacation', array($this, 'vacation_init'));
         $this->register_action('plugin.vacation-save', array($this, 'vacation_save'));
         $this->register_handler('plugin.vacation_form', array($this, 'vacation_form'));
         $this->include_script('vacation.js');
+
+        $this->v = VacationDriverFactory::create( $driver );
     }
 
     public function vacation_init() {
+     //   print_r("Hoi!");
+
         $this->add_texts('localization/',array('vacation'));
         $rcmail = rcmail::get_instance();
         $rcmail->output->set_pagetitle($this->gettext('autoresponder'));
         // Load template
-        $rcmail->output->send('vacation.vacation');
+       $rcmail->output->send('vacation.vacation');
     }
 
     public function vacation_save() {
         $rcmail = rcmail::get_instance();
-
+        
+          // Initialize the driver
+        $this->v->init();
+       
         if ( $this->v->save() ) {
-            $rcmail->output->show_message($this->gettext("success_changed"), 'confirmation');
+       //    $rcmail->output->show_message($this->gettext("success_changed"), 'confirmation');
         } else {
-            $rcmail->output->show_message($this->gettext("failed"), 'error');
-        }
-
-      //  $this->vacation_init();
+         //  $rcmail->output->show_message($this->gettext("failed"), 'error');
+       }
+        //  $rcmail->output->command('display_message', "Hoi!", 'confirmation');
+        $this->vacation_init();
        
 
     }
@@ -64,7 +67,12 @@ class vacation extends rcube_plugin {
     public function vacation_form() {
         $rcmail = rcmail::get_instance();
 
+      
+  // Initialize the driver
+        $this->v->init();
         $settings = $this->v->_get();
+
+        $rcmail->output->add_script("var settings_account=true;");  
 
         $rcmail->output->set_env('product_name', $rcmail->config->get('product_name'));
         $rcmail->output->set_env('framed', true);
