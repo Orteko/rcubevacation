@@ -31,6 +31,7 @@ class FTP extends VacationDriver {
                 'message' => "Vacation plugin: Cannot login to FTP-server {$this->cfg['server']} using {$username}"
                 ),true, true);
         }
+        
         $username = $userpass = null;
 
         // Enable passive mode
@@ -130,7 +131,7 @@ class FTP extends VacationDriver {
 
         return true;
     }
-
+    
     private function uploadfile($data,$remoteFile) {
         $localFile = tempnam(sys_get_temp_dir(), 'Vac');
         file_put_contents($localFile,trim($data));

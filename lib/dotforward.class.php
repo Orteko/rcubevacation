@@ -35,23 +35,26 @@ class DotForward {
          $this->options['binary'],$this->options['flags'], $a);
 
         } else {
+            // Just set a forwarding address
             return sprintf("%s%s%s",$this->options['keepcopy'],$this->options['username'],$this->options['forward']);
 
         }
-
-
-       
     }
 
     
     public function parse($dotForward) {
+
+        // If the first character is a \, user wants to keep a copy
         $this->options['keepcopy'] = (substr($dotForward,0,1)=='\\');
 
-        
+        // Clean up the .forward file for easier parsing
         $dotForward =  str_replace(array("|","\"","\\"),"",$dotForward);
         $arr = explode(",",trim($dotForward));
+
+        // Assumption: first element is always the username.
         $this->options['username'] = array_shift($arr);
 
+        // Location of the vacation binary may very, so we only back for the slash
         while ($next = array_shift($arr))
         {
              if (substr($next,0,1) == '/')
@@ -60,6 +63,7 @@ class DotForward {
                 list($this->options['binary']) = explode(" ",$next);
                 $this->options['enabled'] = true;
             } else {
+                
                 $this->options['forward'] = $next;
             }
         }

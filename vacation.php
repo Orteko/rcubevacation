@@ -13,7 +13,7 @@
  */
 
 
-
+// Load available drivers.
 require 'lib/vacationdriver.class.php';
 require 'lib/ftp.class.php';
 require 'lib/dotforward.class.php';
@@ -22,14 +22,14 @@ require 'lib/virtual.class.php';
 
 class vacation extends rcube_plugin {
     public $task = 'settings';
-    private $v,$cfg = "";
+    private $v = "";
 
     public function init() {
         $this->add_texts('localization/', array('vacation'));
         $this->load_config();
         $driver = rcmail::get_instance()->config->get("driver");
 
-        $this->v = VacationDriverFactory::create($driver);
+        $this->v = VacationDriverFactory::create( $driver );
         // Initialize the driver
         $this->v->init();
 
@@ -50,7 +50,7 @@ class vacation extends rcube_plugin {
     public function vacation_save() {
         $rcmail = rcmail::get_instance();
 
-        if ($rv = $this->v->save() ) {
+        if ( $this->v->save() ) {
             $rcmail->output->show_message($this->gettext("success_changed"), 'confirmation');
         } else {
             $rcmail->output->show_message($this->gettext("failed"), 'error');
@@ -102,11 +102,13 @@ class vacation extends rcube_plugin {
             $field_id,
             rep_specialchars_output($this->gettext('autoreplymessage')),
             $input_autoresponderbody->show($settings['body']));
-            $out .= "\n</table>
+
+        $out .= "\n</table>
                     </fieldset>";
-        
-         $out.='<fieldset><legend>' . $this->gettext('forward') . '</legend>' . "\n";
-             $out .= '<br />' . "\n";
+
+        // Information on the forward in a seperate fieldset.
+        $out.='<fieldset><legend>' . $this->gettext('forward') . '</legend>' . "\n";
+        $out .= '<br />' . "\n";
         $out .= '<table' . $attrib_str . ">\n\n";
 
         // Keep a local copy of the mail

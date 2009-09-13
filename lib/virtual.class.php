@@ -12,9 +12,12 @@ class Virtual extends VacationDriver {
         } else {
             $this->db = new rcube_mdb2($this->cfg['dsn'], '', FALSE);
             $this->db->db_connect('w');
+            $this->db->set_debug((bool)$this->rcmail->config->get('sql_debug'));
             $dsn = MDB2::parseDSN($this->cfg['dsn']);
         }
         // TODO Determine domain
+
+         
 
         $this->domain_id = $this->domainLookup();
 
@@ -130,7 +133,6 @@ class Virtual extends VacationDriver {
     {
         // Sets the domain
         list($username,$this->domain) = explode("@",$this->user->get_username());
-        echo $this->rcmail->user->data['mail_host'];
         if (! empty($this->cfg['domain_lookup_query']))
         {
             $sql = $this->translate($this->cfg['domain_lookup_query']);

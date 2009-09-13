@@ -4,10 +4,11 @@ abstract class VacationDriver {
     protected $rcmail,$user,$forward,$body,$subject = "";
     protected $enable,$keepcopy = false;
 
-    abstract protected function setVacation();
     abstract public function _get();
     abstract public function init();
+    abstract protected function setVacation();
 
+    // Provide easy access for the drivers to frequently used objects
     public function __construct() {
         $this->rcmail = rcmail::get_instance();
         $this->user = $this->rcmail->user;
@@ -25,15 +26,8 @@ abstract class VacationDriver {
         $this->keepcopy = (NULL != get_input_value('_vacation_keepcopy', RCUBE_INPUT_POST));
         $this->forward = get_input_value('_vacation_forward', RCUBE_INPUT_POST);
 
-        // This class is responsible for 
+        // This method performs the actual work
         return $this->setVacation();
-
-
-        // Enable or disable the vacation auto-reply
-        if ($this->enable) {
-            return $this->enable();
-        } else {
-            return $this->disable();
-        }
+        
     }
 }?>
