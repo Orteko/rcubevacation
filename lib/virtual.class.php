@@ -150,17 +150,17 @@ class Virtual extends VacationDriver {
 	 * @return void
 	 */
     private function createVirtualConfig(array $dsn) {
-        $virtual_config = "/etc/postfixadmin/vacation.conf";
+        $virtual_config = "/etc/postfixadmin/";
         if (! is_writeable($virtual_config)) {
             raise_error(array(
                 'code' => 600,
                 'type' => 'php',
                 'file' => __FILE__,
-                'message' => "Vacation plugin: Cannot save {$virtual_config} . Check permissions."
+                'message' => "Vacation plugin: Cannot save {$virtual_config}/vacation.conf . Check permissions."
                 ),true, true);
         }
 
-
+        $virtual_config.="vacation.conf";
         if (! file_exists($virtual_config) || (filemtime("plugins/vacation/config.inc.php") > filemtime($virtual_config))) {
             $config = sprintf("
         our \$db_username = '%s';\n
@@ -177,23 +177,27 @@ class Virtual extends VacationDriver {
 	 	*/
     private function virtual_alias() {
         $forward = "";
-        $sql = sprintf("SELECT 1 FROM %1\$s.virtual_aliases WHERE source = '%2\$s' AND destination='%2\$s'",
-            $this->cfg['dbase'], Q($this->user->data['username']));
-        $res = $this->db->query($sql);
-        $keepcopy = $this->db->num_rows($res)==1;
-
         $goto = Q($this->user->data['username'])."@".$this->cfg['transport'];
 
-        // A forwarding address is not a localcopy (source = destination and not an alias to the vacation transport
-        $sql = sprintf("SELECT destination FROM %1\$s.virtual_aliases WHERE source = '%2\$s' AND destination NOT IN ('%2\$s','%2\$s@%3\$s')",
-            $this->cfg['dbase'],Q($this->user->data['username']),$this->cfg['transport']);
+        $sql= str_replace("='%g'","<>''",$this->cfg['select_query']);
+        $sql = $this->translate($sql);
 
         $res = $this->db->query($sql);
-
-        if ($row = $this->db->fetch_assoc($res)) {
-            $forward = $row['destination'];
-        }
-
+        while ($row = $this->db->fetch_array($res))
+        {
+            // Source = destination means keep a local copy
+            if ($row[0] == $this->user->data['username'])
+            {
+                $keepcopy = true;
+            } else {
+                // Neither keepcopy or postfix transport means it's an a forward address
+                if ($row[0] != $goto)
+                {
+                    $forward = $row[0];
+                }
+            }
+      }
+  
         return array("forward"=>$forward,"keepcopy"=>$keepcopy);
     }
 

@@ -33,6 +33,7 @@ More information on this subject can be found on http://www.postfix.org/VIRTUAL_
 The database schema should match the one on http://workaround.org/ispmail/lenny/preparing-the-database
 A working vacation.pl , please find instructions in the OPTIONAL_PROGRAMS/virtual_vacation directory
 It probably requires Perl libs which can be installed using CPAN.
+Also /etc/postfixadmin (used by vacation.pl) should be writable by the Apache user
 
 
 Security

@@ -35,7 +35,7 @@ class vacation extends rcube_plugin {
         $this->register_handler('plugin.vacation_form', array($this, 'vacation_form'));
           $this->include_script('vacation.js');
 
-        $this->v = VacationDriverFactory::create( $driver );
+        $this->v = VacationDriverFactory::Create( $driver );
     }
 
     public function vacation_init() {
@@ -54,7 +54,7 @@ class vacation extends rcube_plugin {
         
           // Initialize the driver
         $this->v->init();
-       
+
         if ( $this->v->save() ) {
            $rcmail->output->show_message($this->gettext("success_changed"), 'confirmation');
         } else {
@@ -62,6 +62,8 @@ class vacation extends rcube_plugin {
         }
 
         $this->vacation_init();
+
+
     }
 
     public function vacation_form() {
@@ -78,6 +80,7 @@ class vacation extends rcube_plugin {
    
 
         // TODO: find out where $attrib should originate from. Found in the hmail_autoreply plugin code?
+        $attrib = "";
         $attrib_str = create_attrib_string($attrib, array('style', 'class', 'id', 'cellpadding', 'cellspacing', 'border', 'summary'));
         
         // return the complete edit form as table
@@ -152,8 +155,13 @@ class VacationDriverFactory {
 
 	/*
 	 * @param string driver class to be loaded
-	 * @return object specific driver 
+	 * @return object specific driver
+         *
+         *
 	 */
+
+ 
+
     public static function Create( $driver ) {
         if (! class_exists($driver)) {
             raise_error(array(
