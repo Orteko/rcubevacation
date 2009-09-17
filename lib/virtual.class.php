@@ -29,7 +29,6 @@ class Virtual extends VacationDriver {
         $subject = $body = "";
         $enabled = false;
         $fwd = $this->virtual_alias();
-
         
         $sql = sprintf("SELECT body,subject FROM %s.vacation WHERE email='%s' AND active=1",
         $this->cfg['dbase'],Q($this->user->data['username']));
@@ -76,13 +75,14 @@ class Virtual extends VacationDriver {
                 $this->domain
             );
             $this->db->query($sql);
+            
             $aliasArr[] = '%g';
 
         }
       
 
-        // Keep a copy of the mail
-        if ($this->keepcopy)
+        // Keep a copy of the mail if explicitly asked for or when using vacation
+        if ($this->keepcopy || in_array('%g',$aliasArr))
         {
             $aliasArr[] = '%e';
         }
@@ -107,8 +107,6 @@ class Virtual extends VacationDriver {
             
             $this->db->query($sql);
         }
-
-        file_put_contents('/tmp/file',$sql."\n".print_r($aliasArr,true));
         return true;
     }
 

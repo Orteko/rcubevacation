@@ -17,7 +17,7 @@ $rcmail_config['driver'] = 'virtual';
 // For security reasons it's not recommended that the Roundcube user (in db.inc.php)
 // should be able to edit the Postfix user tables.
 // Specify a DSN with sufficient privileges here or leave empty so the system DSN is used.
-$rcmail_config['virtual']['dsn'] = 'mysql://roundcube:password@localhost';
+$rcmail_config['virtual']['dsn'] = 'mysql://roundcube:password@localhost/postfix';
 // Postfix server only. See http://www.postfix.org/VIRTUAL_README.html#autoreplies
 $rcmail_config['virtual']['transport'] = 'vacation.yourdomain.org';
 
