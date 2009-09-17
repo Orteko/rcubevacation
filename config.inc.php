@@ -21,16 +21,22 @@ $rcmail_config['virtual']['dsn'] = 'mysql://roundcube:password@localhost';
 // Postfix server only. See http://www.postfix.org/VIRTUAL_README.html#autoreplies
 $rcmail_config['virtual']['transport'] = 'vacation.yourdomain.org';
 
-// Database used by Postfix
+// Database used by the mailserver. The vacation and virtual alias tables must exist in this database
 $rcmail_config['virtual']['dbase'] = 'postfix';
-// Parameters: %e = email address, %d = domain,%i = domain_id, %g = goto . The latter is used for the transport
+
+// Parameters: %e = email address, %d = domain, %i = domain_id, %g = goto . The latter is used for the transport
 // %g expands to john@domain.org@vacation.yourdomain.org
-$rcmail_config['virtual']['select_query'] = "SELECT destination FROM postfix.virtual_aliases WHERE source='%e' AND destination='%g'";
-$rcmail_config['virtual']['delete_query'] = "DELETE FROM postfix.virtual_aliases WHERE domain_id='%d' AND destination='%g' AND source='%e' LIMIT 1";
-$rcmail_config['virtual']['insert_query'] = "INSERT INTO postfix.virtual_aliases (domain_id,source,destination) VALUES (%i,'%e','%g')";
+// %m is required as the Roundcube database is different from the mailserver's database.
+
+$rcmail_config['virtual']['select_query'] = "SELECT destination FROM %m.virtual_aliases WHERE source='%e' AND destination='%g'";
+
+// Aliases are recreated when saving vacation settings
+$rcmail_config['virtual']['delete_query'] = "DELETE FROM %m.virtual_aliases WHERE domain_id=%i AND source='%e'";
+
+$rcmail_config['virtual']['insert_query'] = "INSERT INTO %m.virtual_aliases (domain_id,source,destination) VALUES (%i,'%e','%g')";
 // If the alias table uses domain_id (integer) rather than domain (varchar), specify a query here to lookup domain_id
 // The result will be assigned to %i
-//$rcmail_config['virtual']['domain_lookup_query'] = "SELECT id FROM postfix.virtual_domains WHERE name='%d'";
+$rcmail_config['virtual']['domain_lookup_query'] = "SELECT id FROM postfix.virtual_domains WHERE name='%d'";
 /*
 	setuid backend parameters
 */

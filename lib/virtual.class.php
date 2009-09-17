@@ -29,6 +29,8 @@ class Virtual extends VacationDriver {
         $subject = $body = "";
         $enabled = false;
         $fwd = $this->virtual_alias();
+
+        
         $sql = sprintf("SELECT body,subject FROM %s.vacation WHERE email='%s' AND active=1",
         $this->cfg['dbase'],Q($this->user->data['username']));
 
@@ -39,7 +41,7 @@ class Virtual extends VacationDriver {
             $enabled = true;
         }
 
-        return array("enabled"=>$enabled, "subject"=>$subject, "body"=>$body,"keepcopy"=>$fwd['keepcopy'],"forward"=>$fwd['forward']);
+        return array("enabled"=>$fwd['enabled']&&$enabled, "subject"=>$subject, "body"=>$body,"keepcopy"=>$fwd['keepcopy'],"forward"=>$fwd['forward']);
     }
 
 	/*
@@ -48,7 +50,10 @@ class Virtual extends VacationDriver {
     public function setVacation() {
         // If there is an existing entry in the vacation table, delete it.
         // This also triggers the cascading delete on the vacation_notification, but's ok for now.
-        // @todo: allow update statements
+
+        // We store since version 1.6 all data into one row. 
+        $aliasArr = array();
+
 
         $this->domain_id = $this->domainLookup();
 
@@ -70,63 +75,53 @@ class Virtual extends VacationDriver {
                 $this->body,
                 $this->domain
             );
-        $this->db->query($sql);
+            $this->db->query($sql);
+            $aliasArr[] = '%g';
 
-         $sql = $this->translate($this->cfg['insert_query']);
-         $this->db->query($sql);
         }
-        $current = $this->_get();
+      
 
         // Keep a copy of the mail
-
-        if ($this->keepcopy != $current['keepcopy'])
+        if ($this->keepcopy)
         {
-            if ($this->keepcopy)
-            {
-                $sql = str_replace('%g','%e',$this->cfg['insert_query']);
-                $sql = $this->translate($sql);
-                $this->db->query($sql);
-            } else {
-                $sql = str_replace('%g','%e',$this->cfg['delete_query']);
-                $sql = $this->translate($sql);
-                $this->db->query($sql);
-            }
+            $aliasArr[] = '%e';
         }
 
         // Set a forward
-        if ($this->forward != $current['forward'])
+        if ($this->forward != null)
         {
-            $sql = str_replace('%g',$current['forward'],$this->cfg['delete_query']);
-            $sql = $this->translate($sql);
-            $this->db->query($sql);
-            if ($this->forward != null)
-            {
-                $sql = str_replace('%g','%f',$this->cfg['insert_query']);
-                $sql = $this->translate($sql);
-                $res = $this->db->query($sql);
-            }
+            $aliasArr[] = '%f';
         }
+
+        // Aliases are re-created if $sqlArr is not empty.
+        $sql = $this->translate($this->cfg['delete_query']);
+        $this->db->query($sql);
+
+        // One row to store all aliases
+        if (! empty($aliasArr))
+        {
+            
+            $alias = join(",",$aliasArr);
+            $sql = str_replace('%g',$alias,$this->cfg['insert_query']);
+            $sql = $this->translate($sql);
+            
+            $this->db->query($sql);
+        }
+
+        file_put_contents('/tmp/file',$sql."\n".print_r($aliasArr,true));
         return true;
     }
 
- 	/*
-	 * @return boolean True if an alias to the virtual transport is found, false otherwise
-	 */
-    private function is_active() {
-        $sql = $this->translate($this->cfg['select_query']);
-        $res = $this->db->query($sql,0,0,1);
-        return $this->db->num_rows($res)==1;
-    }
-
 	/*
-	 * @return array SQL query with substituted parameters
+	 * @return string SQL query with substituted parameters
 	 */
     private function translate($query) {
-        return str_replace(array('%e','%d','%i','%g','%f'),
+        return str_replace(array('%e','%d','%i','%g','%f','%m'),
         array($this->user->data['username'], $this->domain,$this->domain_id,
-        Q($this->user->data['username'])."@".$this->cfg['transport'],$this->forward),$query);
+        Q($this->user->data['username'])."@".$this->cfg['transport'],$this->forward,$this->cfg['dbase']),$query);
     }
 
+    // Sets %i. Lookup the domain_id based on the domainname. Returns the domainname if the query is empty
     private function domainLookup()
     {
         // Sets the domain
@@ -177,28 +172,51 @@ class Virtual extends VacationDriver {
 	 	*/
     private function virtual_alias() {
         $forward = "";
+        $enabled = false;
         $goto = Q($this->user->data['username'])."@".$this->cfg['transport'];
 
         $sql= str_replace("='%g'","<>''",$this->cfg['select_query']);
         $sql = $this->translate($sql);
 
         $res = $this->db->query($sql);
-        while ($row = $this->db->fetch_array($res))
+
+        $rows = array();
+
+        while (list($row) = $this->db->fetch_array($res))
+        {
+       
+            // Postfix accepts multiple aliases on 1 row as well as an alias per row
+            if (strpos($row,",") !== false)
+            {
+               $rows = explode(",",$row);
+            
+            } else {
+               $rows[] = $row;
+            }
+        }
+
+  
+
+        foreach($rows as $row)
         {
             // Source = destination means keep a local copy
-            if ($row[0] == $this->user->data['username'])
+            if ($row == $this->user->data['username'])
             {
                 $keepcopy = true;
             } else {
                 // Neither keepcopy or postfix transport means it's an a forward address
-                if ($row[0] != $goto)
+                if ($row == $goto)
                 {
-                    $forward = $row[0];
+                    $enabled = true;
+                } else {
+                    // Support multi forwarding addresses
+                    $forward .= $row.",";
                 }
             }
+
       }
-  
-        return array("forward"=>$forward,"keepcopy"=>$keepcopy);
+        // Substr removes any trailing comma
+        return array("forward"=>substr($forward,0,-1),"keepcopy"=>$keepcopy,"enabled"=>$enabled);
     }
 
 
