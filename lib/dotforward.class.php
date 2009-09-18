@@ -25,14 +25,14 @@ class DotForward {
         }
 
         // No alias support yet
-        $a = null;
+        
 
         // If there is no binary set, we do not send an out office reply. 
         if ($this->options['binary'] != "")
         {
              return sprintf('%s%s%s,|"%s %s %s"',$this->options['keepcopy'],$this->options['username'],
             $this->options['forward'],
-         $this->options['binary'],$this->options['flags'], $a);
+         $this->options['binary'],$this->options['flags'], $this->options['username']);
 
         } else {
             // Just set a forwarding address
