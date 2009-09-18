@@ -50,7 +50,7 @@ $rcmail_config['setuid']['vacation_flags'] = ''; // See man vacation for valid f
 /*
 	FTP backend parameters
 */
-$rcmail_config['ftp']['server'] = 'ftp.xs4all.nl';
+$rcmail_config['ftp']['server'] = 'localhost';
 $rcmail_config['ftp']['passive'] = true;
 $rcmail_config['ftp']['vacation_executable'] = '/usr/bin/vacation';
 $rcmail_config['ftp']['vacation_flags'] = ''; // See man vacation for valid flags
