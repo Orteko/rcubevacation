@@ -15,7 +15,7 @@ if (window.rcmail) {
      var tab = $('<span>').attr('id', 'settingstabpluginvacation').addClass('tablink');
     rcmail.add_element(tab, 'tabs');
     var button = $('<a>').attr('href', rcmail.env.comm_path+'&_action=plugin.vacation').html(rcmail.gettext('vacation')).appendTo(tab);
-    button.bind('click', function(e){ return rcmail.command('plugin.password', this) });
+    button.bind('click', function(e){ return rcmail.command('plugin.vacation', this) });
 
 
 
