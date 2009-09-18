@@ -15,7 +15,6 @@ class Virtual extends VacationDriver {
             $this->db->set_debug((bool)$this->rcmail->config->get('sql_debug'));
             $dsn = MDB2::parseDSN($this->cfg['dsn']);
         }
-        
 
         $this->createVirtualConfig($dsn);
     }
@@ -26,21 +25,21 @@ class Virtual extends VacationDriver {
 	 * @return Array Values for the form
 	 */
     public function _get() {
-        $subject = $body = "";
-        $enabled = false;
-        $fwd = $this->virtual_alias();
+        $vacArr = array("subject"=>"", "body"=>"");
+
+        $fwdArr = $this->virtual_alias();
         
-        $sql = sprintf("SELECT body,subject FROM %s.vacation WHERE email='%s' AND active=1",
+        $sql = sprintf("SELECT subject,body FROM %s.vacation WHERE email='%s' AND active=1",
         $this->cfg['dbase'],Q($this->user->data['username']));
 
         $res = $this->db->query($sql);
         if ($row = $this->db->fetch_assoc($res)) {
-            $body = $row['body'];
-            $subject = $row['subject'];
+            $vacArr['body'] = $row['body'];
+            $vacArr['subject'] = $row['subject'];
             $enabled = true;
         }
 
-        return array("enabled"=>$fwd['enabled']&&$enabled, "subject"=>$subject, "body"=>$body,"keepcopy"=>$fwd['keepcopy'],"forward"=>$fwd['forward']);
+        return array_merge($fwdArr, $vacArr );
     }
 
 	/*
@@ -53,10 +52,11 @@ class Virtual extends VacationDriver {
         // We store since version 1.6 all data into one row. 
         $aliasArr = array();
 
-
+		// Sets class property
         $this->domain_id = $this->domainLookup();
 
         $sql = sprintf("DELETE FROM %s.vacation WHERE email='%s'",$this->cfg['dbase'],Q($this->user->data['username']));
+
         $this->db->query($sql);
 
         // Delete the alias to the vacation transport
@@ -65,24 +65,16 @@ class Virtual extends VacationDriver {
 
         // (Re)enable the vacation message and the vacation transport alias
         if ($this->enable && $this->body != "" && $this->subject != "") {
+            $sql = "INSERT INTO {$this->cfg['dbase']}.vacation (email,subject,body,domain,created,active) VALUES (?,?,?,?,NOW(),1)";
+            $this->db->query($sql, Q($this->user->data['username']), $this->subject, $this->body, $this->domain);
 
-
-        $sql = sprintf("INSERT INTO %s.vacation (email,subject,body,domain,created,active) VALUES ('%s','%s','%s','%s',NOW(),1)",
-                $this->cfg['dbase'],
-                Q($this->user->data['username']),
-                $this->subject,
-                $this->body,
-                $this->domain
-            );
-            $this->db->query($sql);
-            
             $aliasArr[] = '%g';
-
         }
       
 
         // Keep a copy of the mail if explicitly asked for or when using vacation
-        if ($this->keepcopy || in_array('%g',$aliasArr))
+	$always = (isset($this->cfg['always_keep_copy']) && $this->cfg['always_keep_copy']);
+        if ($this->keepcopy || in_array('%g',$aliasArr) || $always )
         {
             $aliasArr[] = '%e';
         }
@@ -131,18 +123,19 @@ class Virtual extends VacationDriver {
             $row = $this->db->fetch_array($res);
             return $row[0];
         } else {
-            return $domain;
+            return $this->domain;
         }
 
     }
 
 
-     /*Removes the aliases
+     /*Creates configuration file for vacation.pl
 	 *
 	 * @param array dsn
 	 * @return void
 	 */
     private function createVirtualConfig(array $dsn) {
+
         $virtual_config = "/etc/postfixadmin/";
         if (! is_writeable($virtual_config)) {
             raise_error(array(
@@ -154,12 +147,13 @@ class Virtual extends VacationDriver {
         }
 
         $virtual_config.="vacation.conf";
+		// Only recreate vacation.conf if config.inc.php has been modified since
         if (! file_exists($virtual_config) || (filemtime("plugins/vacation/config.inc.php") > filemtime($virtual_config))) {
             $config = sprintf("
-        our \$db_username = '%s';\n
-        our \$db_password = '%s';\n
-        our \$db_name     = '%s';\n
-        our \$vacation_domain = '%s';\n",$dsn['username'],$dsn['password'],$dsn['database'],$this->cfg['transport']);
+        our \$db_username = '%s';
+        our \$db_password = '%s';
+        our \$db_name     = '%s';
+        our \$vacation_domain = '%s';",$dsn['username'],$dsn['password'],$this->cfg['dbase'],$this->cfg['transport']);
             file_put_contents($virtual_config,$config);
         }
     }
@@ -173,7 +167,8 @@ class Virtual extends VacationDriver {
         $enabled = false;
         $goto = Q($this->user->data['username'])."@".$this->cfg['transport'];
 
-        $sql= str_replace("='%g'","<>''",$this->cfg['select_query']);
+		// Backwards compatiblity. Since >=1.6 this is no longer needed
+		$sql= str_replace("='%g'","<>''",$this->cfg['select_query']);
         $sql = $this->translate($sql);
 
         $res = $this->db->query($sql);

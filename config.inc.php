@@ -17,12 +17,15 @@ $rcmail_config['driver'] = 'virtual';
 // For security reasons it's not recommended that the Roundcube user (in db.inc.php)
 // should be able to edit the Postfix user tables.
 // Specify a DSN with sufficient privileges here or leave empty so the system DSN is used.
-$rcmail_config['virtual']['dsn'] = 'mysql://roundcube:password@localhost/postfix';
+$rcmail_config['virtual']['dsn'] = 'mysql://roundcube:password@localhost';
 // Postfix server only. See http://www.postfix.org/VIRTUAL_README.html#autoreplies
 $rcmail_config['virtual']['transport'] = 'vacation.yourdomain.org';
 
 // Database used by the mailserver. The vacation and virtual alias tables must exist in this database
 $rcmail_config['virtual']['dbase'] = 'postfix';
+
+// Always maintain an $email -> $email alias in the alias table
+$rcmail_config['virtual']['always_keep_copy'] = true;
 
 // Parameters: %e = email address, %d = domain, %i = domain_id, %g = goto . The latter is used for the transport
 // %g expands to john@domain.org@vacation.yourdomain.org
