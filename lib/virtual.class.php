@@ -138,7 +138,7 @@ class Virtual extends VacationDriver {
 
         $virtual_config = "/etc/postfixadmin/";
         if (! is_writeable($virtual_config)) {
-            raise_error(array(
+        raise_error(array(
                 'code' => 600,
                 'type' => 'php',
                 'file' => __FILE__,
@@ -146,14 +146,18 @@ class Virtual extends VacationDriver {
                 ),true, true);
         }
 
+        // Fix for vacation.pl
+        if ($dsn['type'] == 'pgsql') { $dsn['type'] = 'Pg'; }
+
         $virtual_config.="vacation.conf";
 		// Only recreate vacation.conf if config.inc.php has been modified since
         if (! file_exists($virtual_config) || (filemtime("plugins/vacation/config.inc.php") > filemtime($virtual_config))) {
             $config = sprintf("
+        our \$db_type = '%s';
         our \$db_username = '%s';
         our \$db_password = '%s';
         our \$db_name     = '%s';
-        our \$vacation_domain = '%s';",$dsn['username'],$dsn['password'],$this->cfg['dbase'],$this->cfg['transport']);
+        our \$vacation_domain = '%s';",$dsn['type'],$dsn['username'],$dsn['password'],$this->cfg['dbase'],$this->cfg['transport']);
             file_put_contents($virtual_config,$config);
         }
     }

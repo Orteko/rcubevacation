@@ -163,7 +163,9 @@ class VacationDriverFactory {
  
 
     public static function Create( $driver ) {
-        if (! class_exists($driver)) {
+        $driver = strtolower($driver);
+
+        if (! file_exists("plugins/vacation/lib/".$driver.".class.php")) {
             raise_error(array(
                 'code' => 600,
                 'type' => 'php',

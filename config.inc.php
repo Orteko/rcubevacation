@@ -6,7 +6,7 @@ Configuration parameters for the different drivers go here
 
 
 // Defines which driver is active. Valid options are: ftp, virtual or setuid
-$rcmail_config['driver'] = 'ftp';
+$rcmail_config['driver'] = 'setuid';
 
 /*
 	Virtual vacation. Use this with virtual users
@@ -44,13 +44,15 @@ $rcmail_config['virtual']['domain_lookup_query'] = "SELECT id FROM postfix.virtu
 	setuid backend parameters
 */
 
-$rcmail_config['setuid']['setuid_executable'] = '/usr/bin/squirrel_stuff';
+$rcmail_config['setuid']['setuid_executable'] = '/usr/bin/squirrelmail_vacation_proxy';
+$rcmail_config['setuid']['vacation_executable'] = '/usr/bin/vacation';
 $rcmail_config['setuid']['vacation_flags'] = ''; // See man vacation for valid flags
-
+$rcmail_config['setuid']['vacation_message'] = '.vacation.msg';
+$rcmail_config['setuid']['vacation_database'] = '.vacation.db';
 /*
 	FTP backend parameters
 */
-$rcmail_config['ftp']['server'] = 'localhost';
+$rcmail_config['ftp']['server'] = 'ftp.xs4all.nl';
 $rcmail_config['ftp']['passive'] = true;
 $rcmail_config['ftp']['vacation_executable'] = '/usr/bin/vacation';
 $rcmail_config['ftp']['vacation_flags'] = ''; // See man vacation for valid flags

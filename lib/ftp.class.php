@@ -47,22 +47,17 @@ class FTP extends VacationDriver {
 
     // Download .forward and .vacation.message file
     public function _get() {
-        $subject = $body = $forward = "";
-        $keepcopy = false;
-
+        $vacArr = array("subject"=>"", "body"=>"","forward"=>"","keepcopy"=>false,"enabled"=>false);
         if ($this->is_active()) {
             $dot_vacation_msg = explode("\n",$this->downloadfile($this->cfg['vacation_message']));
-            $subject = str_replace('Subject: ','',$dot_vacation_msg[1]);
-            $body = join("\n",array_slice($dot_vacation_msg,2));
-            $dotForwardFile = $this->downloadfile(".forward");
-            $d = new DotForward();
-            $options = $d->parse($dotForwardFile);
-            $forward = $options['forward'];
-            $keepcopy = $options['keepcopy'];
-            $enabled = $options['enabled'];
+            $vacArr['subject'] = str_replace('Subject: ','',$dot_vacation_msg[1]);
+            $vacArr['body'] = join("\n",array_slice($dot_vacation_msg,2));
         }
-        
-        return array("enabled"=>$enabled, "subject"=>$subject, "body"=>$body,"forward"=>$forward,"keepcopy"=>$keepcopy);
+        if ($dotForwardFile = $this->downloadfile(".forward")) {
+            $d = new DotForward();
+            $vacArr = array_merge($vacArr,$d->parse($dotForwardFile));
+        }
+        return $vacArr;
     }
 
     protected function setVacation() {
@@ -143,13 +138,13 @@ class FTP extends VacationDriver {
     private function downloadfile($remoteFile) {
 
         $localFile = tempnam(sys_get_temp_dir(), 'Vac');
-        if (! ftp_get($this->ftp,$localFile,$remoteFile,FTP_ASCII)) {
-            unlink($localFile);
-            return false;
+        if (ftp_size($this->ftp,$remoteFile) > 0 && ftp_get($this->ftp,$localFile,$remoteFile,FTP_ASCII)) {
+            $content = trim(file_get_contents($localFile));
+        } else {
+            $content = false;
         }
-        $content = file_get_contents($localFile);
         unlink($localFile);
-        return trim($content);
+        return $content;
     }
 
 

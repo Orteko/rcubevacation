@@ -14,6 +14,8 @@ class DotForward {
 
     // Creates the content for the .forward file
     public function create() {
+
+
     //
         if ($this->options['forward'] != null && $this->options['forward'] != "") {
             $this->options['forward'] = ",".$this->options['forward'];
