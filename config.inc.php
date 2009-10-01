@@ -49,13 +49,15 @@ $rcmail_config['setuid']['vacation_executable'] = '/usr/bin/vacation';
 $rcmail_config['setuid']['vacation_flags'] = ''; // See man vacation for valid flags
 $rcmail_config['setuid']['vacation_message'] = '.vacation.msg';
 $rcmail_config['setuid']['vacation_database'] = '.vacation.db';
+$rcmail_config['setuid']['always_keep_message'] = false;
 /*
 	FTP backend parameters
 */
-$rcmail_config['ftp']['server'] = 'ftp.xs4all.nl';
+$rcmail_config['ftp']['server'] = 'localhost';
 $rcmail_config['ftp']['passive'] = true;
 $rcmail_config['ftp']['vacation_executable'] = '/usr/bin/vacation';
 $rcmail_config['ftp']['vacation_flags'] = ''; // See man vacation for valid flags
 $rcmail_config['ftp']['vacation_message'] = '.vacation.msg';
 $rcmail_config['ftp']['vacation_database'] = '.vacation.db';
+$rcmail_config['ftp']['always_keep_message'] = false;
 ?>

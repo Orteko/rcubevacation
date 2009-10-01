@@ -102,7 +102,12 @@ class FTP extends VacationDriver {
     // Cleans up files
 
     private function disable() {
-        $this->deletefiles(array(".forward",$this->cfg['vacation_message'],$this->cfg['vacation_database']));
+	$deleteArr = array(".forward",$this->cfg['vacation_message'],$this->cfg['vacation_database']);
+	if (isset($this->cfg['always_keep_message']) && $this->cfg['always_keep_message'])
+	{
+		unset($deleteArr[1]);	
+	}
+	$this->deletefiles($deleteArr);
         return true;
     }
 
@@ -130,9 +135,20 @@ class FTP extends VacationDriver {
     private function uploadfile($data,$remoteFile) {
         $localFile = tempnam(sys_get_temp_dir(), 'Vac');
         file_put_contents($localFile,trim($data));
-        $result = ftp_put($this->ftp, $remoteFile, $localFile, FTP_ASCII);
+        $result = @ftp_put($this->ftp, $remoteFile, $localFile, FTP_ASCII);
+	
         unlink($localFile);
-        return $result;
+        if (! $result)
+	{
+		raise_error(array(
+                'code' => 600,
+                'type' => 'php',
+                'file' => __FILE__,
+                'message' => "Vacation plugin: Cannot upload {$remoteFile}. Check permissions and/or server configuration"
+                ),true, true);
+	
+	}
+	return $result;
     }
 
     private function downloadfile($remoteFile) {
