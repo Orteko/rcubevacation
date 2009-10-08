@@ -94,11 +94,19 @@ class setuid extends VacationDriver {
 		 * Syntax:	squirrelmail_vacation_proxy  server user password action source destination
 		 */
         $deleteFiles = array(".vacation.msg",".forward");
+        if (isset($this->cfg['always_keep_message']) && $this->cfg['always_keep_message'])
+	{
+		unset($deleteFiles[0]);
+	}
+
+        // Deleting a file still requires a destination. Silly bug in the setuid binary
+        $dummy = 'foobar';
+
         foreach($deleteFiles as $file) {
-            $command = sprintf("%s localhost %s %s delete %s",
+            $command = sprintf('%s localhost %s "%s" delete %s %s',
                 $this->cfg['setuid_executable'],
                 Q($this->user->data['username']),
-                $this->rcmail->decrypt($_SESSION['password']),$file);
+                $this->rcmail->decrypt($_SESSION['password']),$file,$dummy);
             exec($command);
         }
 

@@ -28,10 +28,21 @@ Licensing
 This product is distributed under the GPL. Please read through the file
 LICENSE in Roundcube's root directory for more information about the license.
 
+
+Requirement for both FTP and setuid backend
+-------------------------------------------
+- The /usr/bin/binary must create .vacation.db when it's missing.
+- Upgrade to vacation 1.2.7.0 as earlier versions have a bug that cause vacation to crash when
+  .vacation.db is missing.
+- Debian uses a different vacation binary which up to date
+
+
 Requirements for FTP backend
 ----------------------------
 - A working FTP-server that allows users to login to their $HOME directory.
 - The SMTP-server must use .forward files in the $HOME directory
+- The FTP-server must allow upload of dot-files. Pure-ftpd does not allow this by default
+
 
 Requirements for setuid backend
 -------------------------------
@@ -93,7 +104,7 @@ Check also appropriate maillog to see what's going on.
 
 Known bugs / limitations
 ------------------------
-- Dutch translation is entirely accurate
+- Dutch translation is not entirely accurate
 
 Todo
 ----
