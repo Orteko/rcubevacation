@@ -43,7 +43,7 @@ class setuid extends VacationDriver {
         if ($dotForwardFile = $this->downloadfile(".forward"))
         {
             $d = new DotForward();
-            $vacArr = array_merge($vacArr,$d->parse($dotForwardFile));
+            $vacArr = array_merge($vacArr,$d->parse($dotForwardFile,$this->identity['email']));
         }
         return $vacArr;
 
