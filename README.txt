@@ -29,7 +29,7 @@ This product is distributed under the GPL. Please read through the file
 LICENSE in Roundcube's root directory for more information about the license.
 
 
-Requirement for both FTP and setuid backend
+Requirement for both FTP and setuid,setuidpam backend
 -------------------------------------------
 - The /usr/bin/binary must create .vacation.db when it's missing.
 - Upgrade to vacation 1.2.7.0 as earlier versions have a bug that cause vacation to crash when
@@ -46,7 +46,15 @@ Requirements for FTP backend
 
 Requirements for setuid backend
 -------------------------------
-The Apache user needs to be 'apache' or you need edit config.mk to recompile squirrelmail_vacation_proxy
+- Source code and binary can be found in extra/vacation_binary
+- The Apache user needs to be 'apache' or you need edit config.mk to recompile squirrelmail_vacation_proxy
+
+
+Requirements for setuidpam backend
+----------------------------------
+- This code needs to be compiled
+- Edit config.mk before you compile it
+- Source code can be found in extra/local_autorespond_forward
 
 
 Requirements for SQL backend
@@ -59,8 +67,8 @@ Requirements for SQL backend
 - /etc/postfixadmin (used by vacation.pl) should be writable by the Apache user and readable by the virtual vacation user
 
 
-Security
---------
+SQL backend security
+--------------------
 From a security point of view it's recommended to use a dedicated user for the SQL driver for virtual users. 
 This user must have DELETE and INSERT privileges to database 'postfix', table 'vacation' and database 'postfix',
 table 'virtual_aliases'. It should not be able to access Roundcube's tables. For MySQL this can be used:
@@ -78,6 +86,7 @@ Available drivers
 The following drivers are available to do the low level work:
 - FTP. This driver uploads the .forward file to the user's homedirectory.
 - Setuid. This driver places the .forward file in the user's homedirectory using the squirrel setuid binary.
+- Setuidpam. This new places does the same as setuid but is PAM aware and is the successor of setuid 
 - SQL. This driver creates entries in the vacation table in a MySQL database and modifies the alias table.
 At the moment the SQL driver is tailored towards Postfix/MySQL but can be modified to suit other configurations.
 
@@ -114,6 +123,8 @@ Todo
 Credits
 -------
 The Postfixadmin team for creating the virtual vacation program.
+Squirrelmail team for the squirrelmail_* setuid code
+mled for contributing setuidpam driver
 Peter Ruiter for his initial work on the plugin.
 
 

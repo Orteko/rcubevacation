@@ -40,7 +40,25 @@ $rcmail_config['virtual']['insert_query'] = "INSERT INTO %m.virtual_aliases (dom
 // If the alias table uses domain_id (integer) rather than domain (varchar), specify a query here to lookup domain_id
 // The result will be assigned to %i
 $rcmail_config['virtual']['domain_lookup_query'] = "SELECT id FROM postfix.virtual_domains WHERE name='%d'";
+
+
 /*
+
+	setuidpam backend parameters
+*/
+
+$rcmail_config['setuidpam']['setuid_executable'] = '/usr/bin/squirrelmail_autoresponder_forwarder_proxy';
+$rcmail_config['setuidpam']['vacation_executable'] = '/usr/bin/vacation';
+$rcmail_config['setuidpam']['vacation_flags'] = ''; // See man vacation for valid flags
+$rcmail_config['setuidpam']['vacation_message'] = '.vacation.msg';
+$rcmail_config['setuidpam']['vacation_database'] = '.vacation.db';
+$rcmail_config['setuidpam']['always_keep_message'] = true;
+
+
+
+
+/*
+
 	setuid backend parameters
 */
 
