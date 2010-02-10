@@ -13,7 +13,9 @@ $labels['forwardingaddresses'] = 'Weiterleitung an';
 $labels['forward'] = 'Weiterleitung';
 $labels['success_changed'] = 'Einstellungen erfolgreich gespeichert';
 $labels['failed'] = 'Fehler beim Speichern';
+$labels['separateaddresses'] = 'Mehr EMail Adresse teilen Sie bitte mit dem Strich ab';
 $messages = array();
 $messages['autoresponder'] = 'Abwesenheit';
 $messages['vacation'] = 'Abwesenheit';
+
 ?>
