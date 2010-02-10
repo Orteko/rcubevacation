@@ -129,7 +129,9 @@ class vacation extends rcube_plugin {
             $field_id,
             rep_specialchars_output($this->gettext('keepcopy')),
             $input_localcopy->show($settings['keepcopy']));
-        $out.='<tr><td colspan=2 class="title">Seperate each forward address by a comma</td></tr>';
+        // message wasn't translate    $out.='<tr><td colspan=2 class="title">Seperate each forward address by a comma</td></tr>';
+        $out.='<tr><td colspan=2 class="title">' . $this->gettext('separateaddresses') . '</td></tr>';
+
         // Forward mail to another account
         $field_id = 'vacation_forward';
         $input_autoresponderforward = new html_inputfield(array('name' => '_vacation_forward', 'id' => $field_id, 'size' => 50));
