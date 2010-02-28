@@ -1,26 +1,22 @@
-
 About
 -----
-The vacation plugin allows mail to be forwarded and/or auto-replied with a custom subject / message body.
-Note that the actual auto-reply is done by a program such as /usr/bin/vacation or the virtual user aware vacation.pl
+The vacation plugin allows mail to be forwarded and/or auto-replied with a
+custom subject / message body.
+Note that the actual auto-reply is done by a program such as /usr/bin/vacation
+or the virtual user aware vacation.pl
 
 
 Features
 --------
-The following combination of features is supported:
+The following combination of features is supported for end-users:
 - keep a local copy of the mail
 - forward the mail to another e-mail address
 - send an out of office reply with custom subject & message body
+- enable auto-reply for aliases (all drivers except for SQL) 
 
-
-Installation
-------------
-1) Unzip vacation.tar.gz in plugins/ 
-2) Enable the vacation plugin in config/main.inc.php: $rcmail_config['plugins'] = array('vacation');
-3) Open plugins/vacation/config.inc.php
-4) Set $rcmail_config['driver'] and configure related settings
-5) chown $apache_user plugins/vacation/config.inc.php
-6) Chmod 0400 plugins/vacation/config.inc.php
+An administrator can configure the following options:
+- Support for default subject and body.
+- Per host config + driver and ability to disable 'Vacation' tab on a per-host basis
 
 
 Licensing
@@ -29,66 +25,144 @@ This product is distributed under the GPL. Please read through the file
 LICENSE in Roundcube's root directory for more information about the license.
 
 
-Requirement for both FTP and setuid,setuidpam backend
--------------------------------------------
-- The /usr/bin/binary must create .vacation.db when it's missing.
-- Upgrade to vacation 1.2.7.0 as earlier versions have a bug that cause vacation to crash when
-  .vacation.db is missing.
-- Debian uses a different vacation binary which up to date
-
-
-Requirements for FTP backend
-----------------------------
-- A working FTP-server that allows users to login to their $HOME directory.
-- The SMTP-server must use .forward files in the $HOME directory
-- The FTP-server must allow upload of dot-files. Pure-ftpd does not allow this by default
-
-
-Requirements for setuid backend
--------------------------------
-- Source code and binary can be found in extra/vacation_binary
-- The Apache user needs to be 'apache' or you need edit config.mk to recompile squirrelmail_vacation_proxy
-
-
-Requirements for setuidpam backend
-----------------------------------
-- This code needs to be compiled
-- Edit config.mk before you compile it
-- Source code can be found in extra/local_autorespond_forward
-
-
-Requirements for SQL backend
-----------------------------
-- The Postfix SMTP-server has to be configured to work with an autoreply transport.
-- More information on this subject can be found on http://www.postfix.org/VIRTUAL_README.html#autoreplies
-- SQL scripts for creating the vacation tables can be found in extra/virtual_vacation/*.sql
-- A working vacation.pl , please find instructions in the extra/virtual_vacation directory
-  It probably requires Perl libs which can be installed using CPAN.
-- /etc/postfixadmin (used by vacation.pl) should be writable by the Apache user and readable by the virtual vacation user
-
-
-SQL backend security
---------------------
-From a security point of view it's recommended to use a dedicated user for the SQL driver for virtual users. 
-This user must have DELETE and INSERT privileges to database 'postfix', table 'vacation' and database 'postfix',
-table 'virtual_aliases'. It should not be able to access Roundcube's tables. For MySQL this can be used:
-
-CREATE USER 'virtual_vacation'@'localhost' IDENTIFIED BY 'choose_a_password';
-GRANT DELETE,INSERT ON `postfix` . vacation TO 'virtual_vacation'@'localhost';
-GRANT DELETE,INSERT,UPDATE ON `postfix` . vacation_notification TO 'virtual_vacation'@'localhost';
-GRANT DELETE,INSERT ON `postfix` . virtual_aliases TO 'virtual_vacation'@'localhost';
-
-If Roundcube's main DSN is somehow affected by an SQL injection bug, no damage can be done to the actual maildelivery
-Using a dedicated DSN is optional, the plugin works fine with the main DSN. 
-
 Available drivers
 ------------------
 The following drivers are available to do the low level work:
 - FTP. This driver uploads the .forward file to the user's homedirectory.
-- Setuid. This driver places the .forward file in the user's homedirectory using the squirrel setuid binary.
-- Setuidpam. This new places does the same as setuid but is PAM aware and is the successor of setuid 
-- SQL. This driver creates entries in the vacation table in a MySQL database and modifies the alias table.
-At the moment the SQL driver is tailored towards Postfix/MySQL but can be modified to suit other configurations.
+- SSHFTP. This driver uses SSH to upload .forward file to the user's homedirectory.
+- Setuid. This driver places the .forward file in the user's homedirectory using
+the squirrel setuid binary.
+- SQL. This driver creates entries in the vacation table in a MySQL database and
+modifies the alias table.
+- None. This driver disables the Vacation tab for hosts that do not support Out of office replies.
+At the moment the SQL driver is tailored towards Postfix with either MySQL or Postgresql
+ but can be modified to suit other configurations.
+
+More on each driver below: 
+
+
+FTP Driver
+----------
+
+The FTP driver establishes an FTP-connection to the current IMAP-host or the server
+specified in config.ini
+The login credentials of the current user are used to login to the FTP-server.   
+
+If .forward exists and it contains /usr/bin/vacation (as specified in config.inc.php),
+the out of office is enabled. 
+
+If there are any forwarding addresses found in .forward, these are displayed to the user.
+
+If alias_identities = true (config.inc.php) and there are any aliases found in .forward,
+these are displayed to the user.
+If alias_identities = true (config.inc.php) and there are no aliases found in .forward,
+ the identities are loaded and shown. 
+
+An alias contains no domain as it's limited to normal system users (/etc/passwd).
+If there is more than one identity present, the button 'Get aliases' is shown. 
+
+In either case it then downloads the .vacation.msg file that contains both
+ message body and subject. If .vacation.msg cannot be found,
+it uses the default body and subject as defined in 'config.inc.php'.
+
+Requirements for using this driver:
+- A working FTP-server that allows users to login to their $HOME directory.
+- The SMTP-server must use .forward files found in the $HOME directory
+- The FTP-server must allow upload of dot-files. Pure-ftpd does not allow this by default
+
+
+SSHFTP Driver
+-------------
+
+The SSHFTP backend uses SSH to establish a secure connection to the current
+IMAP-host or the server specified in config.ini
+It then uses the SFTP subsystem to read and write files.
+The SSHFTP behaves just like the FTP driver.
+
+Requirements for using this driver:
+- Requires PECL package to be installed. See http://nl2.php.net/manual/en/ssh2.installation.php
+- The SMTP-server must use .forward files in the $HOME directory
+
+
+Setuid Driver
+-------------
+The setuid backend uses a setuid binary to read/write .forward,.vacation.msg
+files for the current logged in user.
+Apache executes the setuid binary and passes the user credentials as parameters. 
+
+The extra/vacation_binary/ directory of the plugin contains the setuid binary and its source code. 
+To install this driver, change directory to $path/to/extra/vacation_binary and
+issue with root priviliges the command: "make install".
+
+This command install "squirrel_vacation_proxy" to /usr/bin with the setuid bit set.
+This directory can be changed in config.mk
+
+Apart from the way it reads/writes files, it behaves like the FTP driver.
+
+Requirements for using this driver:
+- The Apache user needs to be 'apache' or you need to edit config.mk
+and recompile squirrelmail_vacation_proxy using 'make'.
+
+Requirement for using .forward files
+------------------------------------
+The SSHFTP, FTP and setuid backend all use .forward files.
+See config.inc.php for available options, like enabling identities, keeping copies etc.
+
+If you want to use one of these drivers, please note: 
+- The /usr/bin/binary must create .vacation.db when it is missing.
+- Upgrade to vacation 1.2.7.0 as earlier versions have a bug that cause vacation to crash when
+  .vacation.db is missing.
+
+
+Virtual/SQL Driver
+------------------
+The Virtual/SQL driver is the most advanced driver but tailored to be used with Postfix. 
+This is how it works:
+
+If the vacation box gets checked by the end-user a new virtual alias will be created in the designated table as
+joe@domain.org@vacation.domain.org
+The 'vacation.domain.org' part is configered in config.ini (see also INSTALL.TXT) as well as /etc/postfix/master.cf
+
+joe@domain.org is passed as a for the 'vacation.pl' script that is associated with 'vacation.domain.org' transport.
+This vacation.pl fetches the mail body and subject from the database and constructs a new mail.
+
+The code is tested with a Postfix/MySQL setup based on the tutorials at http://workaround.org/ispmail/lenny
+It supports either normalized tables (domain_id) or non-normalized tables (domainname).
+Please see config.ini for options.
+
+While the driver should be able to work with different database schemes,
+for the vacation table layout it relies on the schema which can be found
+in the extra/virtual_vacation directory.
+
+Installation instructions are provided by the Postfixadmin team,
+ included in the extra/virtual_vacation directory.
+Please follow the instructions as described in INSTALL.TXT before enabling the driver.
+
+The virtual driver can create /etc/postfixadmin/vacation.conf for you,
+based on the current database configuration.
+To enable this, set createvacationconf = True in config.ini 
+
+You do not need Postfixadmin to use the virtual vacation plugin. 
+
+From a security point of view it's recommended to use a dedicated database user
+for the SQL driver for virtual users. 
+This user must have UPDATE,SELECT and INSERT privileges to database 'postfix',
+table 'vacation' and database 'postfix', table 'virtual_aliases'.
+It should not be able to access Roundcube's tables.
+
+For MySQL the following can be used:
+CREATE USER 'virtual_vacation'@'localhost' IDENTIFIED BY 'choose_a_password';
+GRANT UPDATE,INSERT,SELECT ON `postfix` . vacation TO 'virtual_vacation'@'localhost';
+GRANT DELETE,INSERT,SELECT ON `postfix` . virtual_aliases TO 'virtual_vacation'@'localhost';
+
+If Roundcube's main DSN is somehow affected by an SQL injection bug,
+no damage can be done to the actual maildelivery.
+Using a dedicated DSN is optional, the plugin works fine with the main DSN. 
+
+
+None Driver
+-----------
+This pseudo driver disables the Vacation tab for hosts that do not support Out of office replies.
 
 
 Writing a new driver
@@ -97,36 +171,39 @@ Writing a new driver
 3) Create lib/$driver.class.php
 3) Have your new driver extend VacationDriver
 4) Implement abstract public methods from base class: init(), setVacation(),_get()
-   You can access configuration settings using $this->cfg
-   Form variables can be accessed directly using class properties, see save() method5
+   You can access configuration settings using $this->cfg or $this->dotforward
+   Form variables can be accessed directly using class properties, see save() method
 5) Write new private helper methods like is_active() if needed.
-6) Test it
-7) Submit a patch
+6) Register the available options for this driver in VacationConfig.class.php
+7) Test it
+8) Submit a patch
+
 
 Troubleshooting
 ---------------
-For troubleshooting, you want to increase the log_level in config/main.inc.php to 4, so errors are shown.
-Also, double check permissions on the binaries.
+For troubleshooting, you want to increase the log_level in config/main.inc.php to 4,
+ so errors are shown.
 Be sure to check the content of the database or .forward. 
 Check also appropriate maillog to see what's going on.
 
 
 Known bugs / limitations
 ------------------------
-- Dutch translation is not entirely accurate
+- Translations are incomplete
+
 
 Todo
 ----
 - LDAP support
-
+- Support for setting envelop sender in with settings other than -Z
+- Handling case when no identities are found.
 
 Credits
 -------
-The Postfixadmin team for creating the virtual vacation program.
-Squirrelmail team for the squirrelmail_* setuid code
-mled for contributing setuidpam driver
-Peter Ruiter for his initial work on the plugin.
-
+- The Postfixadmin team for creating the virtual vacation program.
+- Squirrelmail team for the setuid backend binary
+- Peter Ruiter for his initial work on the plugin.
+- Rick Saul and Johnson Chow for testing
 
 Patches,feedback and suggestions
 --------------------------------

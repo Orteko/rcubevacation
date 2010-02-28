@@ -5,18 +5,27 @@
 */
 
 class DotForward {
-    private $options = array("binary"=>"","username"=>"","flags"=>"","alias"=>"","enabled"=>false,"forward"=>null,"keepcopy"=>false);
+    private $options = array("binary"=>"",
+    							"username"=>"",
+    							"flags"=>"",
+    							"aliases"=>"",
+    							"enabled"=>false,
+    							"forward"=>null,
+    							"envelop_sender"=>null,
+    							"keepcopy"=>true);
 
     // set options to be used with create()
     public function setOption($key,$value) {
         $this->options[$key] = $value;
     }
+    
+    public function mergeOptions(array $cfgArr) 
+    {
+    	$this->options = array_merge($this->options,$cfgArr);
+    }
 
     // Creates the content for the .forward file
     public function create() {
-
-
-    //
         if ($this->options['forward'] != null && $this->options['forward'] != "") {
             $this->options['forward'] = ",".$this->options['forward'];
         }
@@ -25,9 +34,26 @@ class DotForward {
         if ($this->options['keepcopy'] == true || $this->options['binary'] != "") {
             $this->options['keepcopy'] = "\\";
         }
-
-        // No alias support yet
         
+        // Create aliases
+        if ($this->options['aliases'] != null)
+        {
+        	// Strip leading and trailing slashes. Convert colons to spaces
+        	$this->options['aliases'] = str_replace(","," ",$this->options['aliases']);
+        	$aliases = explode(" ",trim($this->options['aliases']));
+        	
+        	// Creates -a alias1 -a alias2
+        	foreach($aliases as $alias)
+        	{
+        		$this->options['flags'].= " -a ".$alias;
+        	}
+        }
+        
+        // If the vacation binary supports -R for envelop sender, use this. 
+		// TODO: support for Debian (-z)
+        if ($this->options['envelop_sender'] != null) {
+        	$this->options['flags'].= " -R ".$this->options['envelop_sender'];
+        }        
 
         // If there is no binary set, we do not send an out office reply. 
         if ($this->options['binary'] != "")
@@ -38,17 +64,13 @@ class DotForward {
 
         } else {
             // Just set a forwarding address
-            if (! $this->options['keepcopy'])
-            {
-                return $this->options['forward'];
-            } else {
-                return sprintf("%s%s%s",$this->options['keepcopy'],$this->options['username'],$this->options['forward']);
-            }
+            return sprintf("%s%s%s",$this->options['keepcopy'],$this->options['username'],$this->options['forward']);
+
         }
     }
 
     
-    public function parse($dotForward,$username) {
+    public function parse($dotForward) {
 
         // If the first character is a \, user wants to keep a copy
         $this->options['keepcopy'] = (substr($dotForward,0,1)=='\\');
@@ -59,22 +81,29 @@ class DotForward {
 
         // Assumption: first element is always the username.
         $this->options['username'] = array_shift($arr);
-        $dot_username = array_shift($arr);
-        if ($dot_username == $username)
+
+        // Location of the vacation binary may very, so we only look for the slash
+        
+        // Check for aliases
+        $aliasArr = array();
+        while ($tmp = strstr( $dotForward ,"-a"))
         {
-            $this->options['username'] = $username;
-        } else {
-            $this->options['forward'] = $username
-        }
-
-
-        // Location of the vacation binary may very, so we only back for the slash
+        	$tmpArr = explode(" ",$tmp);
+        	array_shift($tmpArr);
+        	$aliasArr[] = array_shift($tmpArr);
+      		$dotForward = join(" ",$tmpArr);
+        } 
+        // Join the elements
+     	$this->options["aliases"] = trim(join(",",$aliasArr));
+        
         while ($next = array_shift($arr))
         {
              if (substr($next,0,1) == '/')
             {
                 // For future use like parsing the flags?
                 list($this->options['binary']) = explode(" ",$next);
+
+				// Checkbox will be checked
                 $this->options['enabled'] = true;
             } else {
                 

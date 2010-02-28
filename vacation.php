@@ -6,176 +6,179 @@
  * @package	plugins
  * @uses	rcube_plugin
  * @author	Jasper Slits <jaspersl@gmail.com>
- * @version	1.6
+ * @version	1.8
  * @license     GPL
  * @link	https://sourceforge.net/projects/rcubevacation/
  * @todo	See README.TXT
- *
- */
+*/
 
 
-// Load available drivers.
+
+// Load required dependencies
 require 'lib/vacationdriver.class.php';
-require 'lib/ftp.class.php';
 require 'lib/dotforward.class.php';
-require 'lib/setuid.class.php';
-require 'lib/virtual.class.php';
+require 'lib/vacationfactory.class.php';
+require 'lib/VacationConfig.class.php';
 
 class vacation extends rcube_plugin {
+    
     public $task = 'settings';
     private $v = "";
-
+    private $inicfg = "";
+    private $enableVacationTab = true;
+    
     public function init() {
         $this->add_texts('localization/', array('vacation'));
         $this->load_config();
-        $driver = rcmail::get_instance()->config->get("driver");
+        
+        $this->inicfg = $this->readIniConfig();
+        // Don't proceed if the current host does not support vacation
+        if (!$this->enableVacationTab) {
+            return false;
+        }
 
+        $this->v = VacationDriverFactory::Create($this->inicfg['driver']);
+
+        $this->v->setIniConfig($this->inicfg);
         $this->register_action('plugin.vacation', array($this, 'vacation_init'));
         $this->register_action('plugin.vacation-save', array($this, 'vacation_save'));
         $this->register_handler('plugin.vacation_form', array($this, 'vacation_form'));
-          $this->include_script('vacation.js');
-
-        $this->v = VacationDriverFactory::Create( $driver );
+        // The vacation_aliases method is defined in vacationdriver.class.php so use $this->v here
+        $this->register_action('plugin.vacation_aliases', array($this->v, 'vacation_aliases'));
+        $this->include_script('vacation.js');
+        $this->include_stylesheet('skins/default/vacation.css');
+        $this->rcmail = rcmail::get_instance();
+        $this->user = $this->rcmail->user;
+        $this->identity = $this->user->get_identity();
+        
+        // forward settings are shared by ftp,sshftp and setuid driver.
+        $this->v->setDotForwardConfig($this->inicfg['driver']);
     }
-
+    
     public function vacation_init() {
-
-
-        $this->add_texts('localization/',array('vacation'));
+        $this->add_texts('localization/', array('vacation'));
         $rcmail = rcmail::get_instance();
         $rcmail->output->set_pagetitle($this->gettext('autoresponder'));
-        // Load template
-      
-       $rcmail->output->send('vacation.vacation');
+        //Load template
+        $rcmail->output->send('vacation.vacation');
     }
-
+    
     public function vacation_save() {
         $rcmail = rcmail::get_instance();
-        
-          // Initialize the driver
+
+        // Initialize the driver
         $this->v->init();
 
-        if ( $this->v->save() ) {
-           $rcmail->output->show_message($this->gettext("success_changed"), 'confirmation');
+        if ($this->v->save()) {
+//          $this->v->getActionText()
+            $rcmail->output->show_message($this->gettext("success_changed"), 'confirmation');
         } else {
-           $rcmail->output->show_message($this->gettext("failed"), 'error');
+            $rcmail->output->show_message($this->gettext("failed"), 'error');
         }
-
         $this->vacation_init();
-
-
     }
 
+    // Parse config.ini and get configuration for current host
+    private function readIniConfig() {
+        $cfg = new VacationConfig();
+        $cfg->setCurrentHost($_SESSION['imap_host']);
+        $config = $cfg->getCurrentConfig();
+
+        if (false !== ($errorStr = $cfg->hasError())) {
+            raise_error(array('code' => 601, 'type' => 'php', 'file' => __FILE__,
+                        'message' => sprintf("Vacation plugin: %s", $errorStr)), true, true);
+        }
+        $this->enableVacationTab = $cfg->hasVacationEnabled();
+        return $config;
+    }
+    
     public function vacation_form() {
         $rcmail = rcmail::get_instance();
-
-      
         // Initialize the driver
         $this->v->init();
         $settings = $this->v->_get();
 
-        $rcmail->output->add_script("var settings_account=true;");  
+        // Load default body & subject if present.
+        if (empty($settings['subject']) && $defaults = $this->v->loadDefaults()) {
+            $settings['subject'] = $defaults['subject'];
+            $settings['body'] = $defaults['body'];
+        }
 
         $rcmail->output->set_env('product_name', $rcmail->config->get('product_name'));
-   
-
-        // TODO: find out where $attrib should originate from. Found in the hmail_autoreply plugin code?
-        $attrib = "";
-        $attrib_str = create_attrib_string($attrib, array('style', 'class', 'id', 'cellpadding', 'cellspacing', 'border', 'summary'));
-        
         // return the complete edit form as table
         $out = '<fieldset><legend>' . $this->gettext('outofoffice') . ' ::: ' . $rcmail->user->data['username'] . '</legend>' . "\n";
-        $out .= '<br />' . "\n";
-        $out .= '<table' . $attrib_str . ">\n\n";
-
         // show autoresponder properties
 
         // Auto-reply enabled
         $field_id = 'vacation_enabled';
-        $input_autoresponderexpires = new html_checkbox(array('name' => '_vacation_enabled', 'id' => $field_id, 'value' => 1));
-        $out .= sprintf("<tr><td class=\"title\"><label for=\"%s\">%s</label>:</td><td>%s</td></tr>\n",
-            $field_id,
-            rep_specialchars_output($this->gettext('autoreply')),
-            $input_autoresponderexpires->show($settings['enabled']));
+        $input_autoresponderactive = new html_checkbox(array('name' => '_vacation_enabled', 'id' => $field_id, 'value' => 1));
+        $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+                $field_id,
+                rep_specialchars_output($this->gettext('autoreply')),
+                $input_autoresponderactive->show($settings['enabled']));
 
         // Subject
         $field_id = 'vacation_subject';
-        $input_autorespondersubject = new html_inputfield(array('name' => '_vacation_subject', 'id' => $field_id, 'size' => 50));
-        $out .= sprintf("<tr><td valign=\"top\" class=\"title\"><label for=\"%s\">%s</label>:</td><td>%s</td></tr>\n",
-            $field_id,
-            rep_specialchars_output($this->gettext('autoreplysubject')),
-            $input_autorespondersubject->show($settings['subject']));
+        $input_autorespondersubject = new html_inputfield(array('name' => '_vacation_subject', 'id' => $field_id, 'size' => 90));
+        $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+                $field_id,
+                rep_specialchars_output($this->gettext('autoreplysubject')),
+                $input_autorespondersubject->show($settings['subject']));
 
         // Out of office body
         $field_id = 'vacation_body';
-        $input_autoresponderbody = new html_textarea(array('name' => '_vacation_body', 'id' => $field_id, 'cols' => 48, 'rows' => 15));
-        $out .= sprintf("<tr><td valign=\"top\" class=\"title\"><label for=\"%s\">%s</label>:</td><td>%s</td></tr>\n",
-            $field_id,
-            rep_specialchars_output($this->gettext('autoreplymessage')),
-            $input_autoresponderbody->show($settings['body']));
+        $input_autoresponderbody = new html_textarea(array('name' => '_vacation_body', 'id' => $field_id, 'cols' => 88, 'rows' => 20));
+        $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+                $field_id,
+                rep_specialchars_output($this->gettext('autoreplymessage')),
+                $input_autoresponderbody->show($settings['body']));
 
-        $out .= "\n</table>
-                    </fieldset>";
+        /* We only use aliases for .forward and only if it's enabled in the config*/
+        if ($this->v->useAliases()) {
+		$size = 0;
+		$hasMultipleIdentities = $this->v->vacation_aliases('buttoncheck');
+		if ($hasMultipleIdentities == '') $size = 15;
+
+                $field_id = 'vacation_aliases';
+                $input_autoresponderalias = new html_inputfield(array('name' => '_vacation_aliases', 'id' => $field_id, 'size' => 75+$size));
+                $out .= '<p>' . $this->gettext('separate_alias') . '</p>';
+
+            // Inputfield with button
+            $out .= sprintf('<p><label for="%s">%s</label>&nbsp;%s
+              ', $field_id, rep_specialchars_output($this->gettext('aliases')),
+				  $input_autoresponderalias->show($settings['aliases']));
+			if ($hasMultipleIdentities!='')
+				$out .= sprintf('<input type="button" id="aliaslink" class="button" value="%s"/>',
+			  rep_specialchars_output($this->gettext('aliasesbutton')));
+			$out .= "</p>";
+
+        }
+        $out .= '</fieldset><fieldset><legend>' . $this->gettext('forward') . '</legend>' . "\n";
+
 
         // Information on the forward in a seperate fieldset.
-        $out.='<fieldset><legend>' . $this->gettext('forward') . '</legend>' . "\n";
-        $out .= '<br />' . "\n";
-        $out .= '<table' . $attrib_str . ">\n\n";
+
 
         // Keep a local copy of the mail
         $field_id = 'vacation_keepcopy';
         $input_localcopy = new html_checkbox(array('name' => '_vacation_keepcopy', 'id' => $field_id, 'value' => 1));
-        $out .= sprintf("<tr><td class=\"title\"><label for=\"%s\">%s</label>:</td><td>%s</td></tr>\n",
-            $field_id,
-            rep_specialchars_output($this->gettext('keepcopy')),
-            $input_localcopy->show($settings['keepcopy']));
-        // message wasn't translate    $out.='<tr><td colspan=2 class="title">Seperate each forward address by a comma</td></tr>';
-        $out.='<tr><td colspan=2 class="title">' . $this->gettext('separateaddresses') . '</td></tr>';
+        $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+                $field_id,
+                rep_specialchars_output($this->gettext('keepcopy')),
+                $input_localcopy->show($settings['keepcopy']));
+        $out .= '<p>' . $this->gettext('separate_forward') . '</p>';
 
         // Forward mail to another account
         $field_id = 'vacation_forward';
-        $input_autoresponderforward = new html_inputfield(array('name' => '_vacation_forward', 'id' => $field_id, 'size' => 50));
-        $out .= sprintf("<tr><td valign=\"top\" class=\"title\"><label for=\"%s\">%s</label>:</td><td>%s</td></tr>\n",
-            $field_id,
-            rep_specialchars_output($this->gettext('forwardingaddresses')),
-            $input_autoresponderforward->show($settings['forward']));
+        $input_autoresponderforward = new html_inputfield(array('name' => '_vacation_forward', 'id' => $field_id, 'size' => 90));
+        $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+                $field_id,
+                rep_specialchars_output($this->gettext('forwardingaddresses')),
+                $input_autoresponderforward->show($settings['forward']));
 
-        $out .= "\n</table>";
-        $out .= '<br />' . "\n";
         $out .= "</fieldset>\n";
         $rcmail->output->add_gui_object('vacationform', 'vacation-form');
         return $out;
-    }
-}
-
-/*
- * Using factory method to create an instance of the driver
- * 
- */
-
-class VacationDriverFactory {
-
-	/*
-	 * @param string driver class to be loaded
-	 * @return object specific driver
-         *
-         *
-	 */
-
- 
-
-    public static function Create( $driver ) {
-        $driver = strtolower($driver);
-
-        if (! file_exists("plugins/vacation/lib/".$driver.".class.php")) {
-            raise_error(array(
-                'code' => 600,
-                'type' => 'php',
-                'file' => __FILE__,
-                'message' => "Vacation plugin: Driver {$driver} does not exist"
-                ),true, true);
-        }
-        return new $driver;
     }
 }
 

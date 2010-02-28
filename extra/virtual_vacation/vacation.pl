@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 #
 # Virtual Vacation 4.0
-# $Revision: 684 $
+# $Revision$
 # Originally by Mischa Peters <mischa at high5 dot net>
 #
 # Copyright (c) 2002 - 2005 High5!
@@ -17,7 +17,7 @@
 #             Slightly better logging which includes messageid
 #             Avoid infinite loops with domain aliases
 #
-# 2005-01-19  Troels Arvin <troels@arvin.dk>
+# 2005-01-19  Troels Arvin <troels at arvin.dk>
 #             PostgreSQL-version.
 #             Normalized DB schema from one vacation table ("vacation")
 #             to two ("vacation", "vacation_notification"). Uses
@@ -27,18 +27,18 @@
 #             to try to avoid SQL injection.
 #             International characters are now handled well.
 #
-# 2005-01-21  Troels Arvin <troels@arvin.dk>
+# 2005-01-21  Troels Arvin <troels at arvin.dk>
 #             Uses the Email::Valid package to avoid sending notices
 #             to obviously invalid addresses.
 #
-# 2007-08-15  David Goodwin <david@palepurple.co.uk>
+# 2007-08-15  David Goodwin <david at palepurple.co.uk>
 #             Use the Perl Mail::Sendmail module for sending mail
 #             Check for headers that start with blank lines (patch from forum)
 #
-# 2007-08-20  Martin Ambroz <amsys@trustica.cz>
+# 2007-08-20  Martin Ambroz <amsys at trustica.cz>
 #             Added initial Unicode support
 #
-# 2008-05-09  Fabio Bonelli <fabiobonelli@libero.it>
+# 2008-05-09  Fabio Bonelli <fabiobonelli at libero.it>
 #             Properly handle failed queries to vacation_notification.
 #             Fixed log reporting.
 #
@@ -56,12 +56,15 @@
 #             Use Log4Perl
 #             Added better testing (and -t option)
 #
-# 2009-06-29  Stevan Bajic <stevan@bajic.ch>
+# 2009-06-29  Stevan Bajic <stevan at bajic.ch>
 #             Add Mail::Sender for SMTP auth + more flexibility
 #
-# 2009-07-07  Stevan Bajic <stevan@bajic.ch>
+# 2009-07-07  Stevan Bajic <stevan at bajic.ch>
 #             Add better alias lookups
 #             Check for more heades from Anti-Virus/Anti-Spam solutions
+#
+# 2009-08-10  Sebastian <reg9009 at yahoo dot de>
+#             Adjust SQL query for vacation timeframe. It is now possible to set from/until date for vacation message.
 #
 # Requirements - the following perl modules are required:
 # DBD::Pg or DBD::mysql 
@@ -111,8 +114,8 @@ use File::Basename;
 # can read it.
 
 # db_type - uncomment one of these
-#our $db_type = 'Pg';
-our $db_type = 'mysql';
+our $db_type = 'Pg';
+#our $db_type = 'mysql';
 
 # leave empty for connection via UNIX socket
 our $db_host = '';
@@ -213,7 +216,7 @@ if($test_mode == 1) {
     if($syslog == 1) {
         my $syslog_appender = Log::Log4perl::Appender->new(
             'Log::Dispatch::Syslog',
-            Facility => 'user',
+            Facility => 'mail',
         );
         $logger->add_appender($syslog_appender);
     }
@@ -282,7 +285,7 @@ sub already_notified {
             my @row = $stm->fetchrow_array;
             my $int = $row[0];
             if ($int > $interval) {
-                $logger->debug("[Interval elapsed, sending the message]: From: $from To:$to");
+                $logger->info("[Interval elapsed, sending the message]: From: $from To:$to");
                 $query = qq{UPDATE vacation_notification SET notified_at=NOW() WHERE on_vacation=? AND notified=?};
                 $stm = $dbh->prepare($query);
                 if (!$stm) {
@@ -316,21 +319,25 @@ sub find_real_address {
         exit(1);
     }
     my $realemail = '';
-    my $query = qq{SELECT email FROM vacation WHERE email=? AND active=$db_true};
+	my $query = qq{SELECT email FROM vacation WHERE email=? and active=$db_true};
     my $stm = $dbh->prepare($query) or panic_prepare($query);
     $stm->execute($email) or panic_execute($query,"email='$email'");
     my $rv = $stm->rows;
 
 # Recipient has vacation
-    if ($rv == 1) {
-        $realemail = $email;
-        $logger->debug("Found '\$email'\ has vacation active");
-    } else {
-        $logger->debug("Looking for alias records that \'$email\' resolves to with vacation turned on");
-        $query = qq{SELECT goto FROM alias WHERE address=? AND (goto LIKE ?,% OR goto LIKE %,? OR goto LIKE %,?,%)};
-        $stm = $dbh->prepare($query) or panic_prepare($query);
-        $stm->execute($email,$email,$email,$email) or panic_execute($query,"address='$email'");
-        $rv = $stm->rows;
+	if ($rv == 1) {
+		$realemail = $email;
+		$logger->debug("Found '\$email'\ has vacation active");
+	} else {
+		my $vemail = $email;
+		$vemail =~ s/\@/#/g;
+		$vemail = $vemail . "\@" . $vacation_domain;
+		$logger->debug("Looking for alias records that \'$email\' resolves to with vacation turned on");
+		$query = qq{SELECT goto FROM alias WHERE address=? AND (goto LIKE ? OR goto LIKE ? OR goto LIKE ? OR goto = ?)};
+		$stm = $dbh->prepare($query) or panic_prepare($query);
+		$stm->execute($email,"$vemail,%","%,$vemail","%,$vemail,%", "$vemail") or panic_execute($query,"address='$email'");
+		$rv = $stm->rows;
+
 
 # Recipient is an alias, check if mailbox has vacation
         if ($rv == 1) { 
