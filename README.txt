@@ -34,9 +34,9 @@ The following drivers are available to do the low level work:
 the squirrel setuid binary.
 - SQL. This driver creates entries in the vacation table in a MySQL database and
 modifies the alias table.
-- None. This driver disables the Vacation tab for hosts that do not support Out of office replies.
-At the moment the SQL driver is tailored towards Postfix with either MySQL or Postgresql
+At the moment the SQL driver is tailored towards Postfix with either MySQL or PostgreSQL
  but can be modified to suit other configurations.
+- None. This driver disables the Vacation tab for hosts that do not support Out of office replies.
 
 More on each driver below: 
 
@@ -130,9 +130,8 @@ The code is tested with a Postfix/MySQL setup based on the tutorials at http://w
 It supports either normalized tables (domain_id) or non-normalized tables (domainname).
 Please see config.ini for options.
 
-While the driver should be able to work with different database schemes,
-for the vacation table layout it relies on the schema which can be found
-in the extra/virtual_vacation directory.
+While the driver should be able to work with different database schemes,for the vacation table 
+layout it relies on the schema which can be found in the extra/virtual_vacation directory.
 
 Installation instructions are provided by the Postfixadmin team,
  included in the extra/virtual_vacation directory.
@@ -157,7 +156,11 @@ GRANT DELETE,INSERT,SELECT ON `postfix` . virtual_aliases TO 'virtual_vacation'@
 
 If Roundcube's main DSN is somehow affected by an SQL injection bug,
 no damage can be done to the actual maildelivery.
-Using a dedicated DSN is optional, the plugin works fine with the main DSN. 
+Using a dedicated DSN is optional, the plugin works fine with the main DSN.
+
+Aliases are not supported as the implemention in vacation.pl is specific for postfixadmin.
+You can however change the source code so it matches your setup. This is beyond the scope
+of this driver. 
 
 
 None Driver
@@ -198,12 +201,14 @@ Todo
 - Support for setting envelop sender in with settings other than -Z
 - Handling case when no identities are found.
 
+
 Credits
 -------
 - The Postfixadmin team for creating the virtual vacation program.
 - Squirrelmail team for the setuid backend binary
 - Peter Ruiter for his initial work on the plugin.
 - Rick Saul and Johnson Chow for testing
+
 
 Patches,feedback and suggestions
 --------------------------------

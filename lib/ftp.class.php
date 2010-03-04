@@ -1,7 +1,14 @@
 <?php
 /*
- FTP class
- @uses DotForward
+ * FTP driver
+ *
+ * @package	plugins
+ * @uses	rcube_plugin
+ * @author	Jasper Slits <jaspersl at gmail dot com>
+ * @version	1.9
+ * @license     GPL
+ * @link	https://sourceforge.net/projects/rcubevacation/
+ * @todo	See README.TXT
  */
 
 class FTP extends VacationDriver {
@@ -13,8 +20,7 @@ class FTP extends VacationDriver {
 
 		// 15 second time-out
 		if (! $this->ftp = ftp_connect($this->cfg['server'],21,15)) {
-			raise_error(array(
-                'code' => 601, 'type' => 'php', 'file' => __FILE__,
+			raise_error(array('code' => 601, 'type' => 'php', 'file' => __FILE__,
                 'message' => sprintf("Vacation plugin: Cannot connect to the FTP-server '%s'",$this->cfg['server'])
 			),true, true);
 
@@ -44,15 +50,17 @@ class FTP extends VacationDriver {
 	public function _get() {
 		$vacArr = array("subject"=>"","aliases"=>"", "body"=>"","forward"=>"","keepcopy"=>true,"enabled"=>false);
 
-		// Vacation is ony
+		// Load current subject and body if it exists
 		if ($dot_vacation_msg = $this->downloadfile($this->dotforward['message'])) {
 			$dot_vacation_msg = explode("\n",$dot_vacation_msg);
 			$vacArr['subject'] = str_replace('Subject: ','',$dot_vacation_msg[1]);
 			$vacArr['body'] = join("\n",array_slice($dot_vacation_msg,2));
 		} 
 
+                // Use dotforward if it exists
 		if ($dotForwardFile = $this->downloadfile(".forward")) {
 			$d = new DotForward();
+                        $d->setOption("username",$this->user->data['username']);
 			$vacArr = array_merge($vacArr,$d->parse($dotForwardFile));
 		}
 		// Load aliases using the available identities
@@ -100,6 +108,7 @@ class FTP extends VacationDriver {
 		}
 		$d->setOption("username",$this->user->data['username']);
 		$d->setOption("forward",$this->forward);
+                $d->setOption("keepcopy",$this->keepcopy);
 
 		// Do we even need to upload a .forward file?
 		if ($this->keepcopy || $this->enable || $this->forward != "")

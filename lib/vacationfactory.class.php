@@ -1,7 +1,14 @@
-<?
+<?php
 /*
- * Using factory method to create an instance of the driver
- * 
+ * VacationFactory class
+ *
+ * @package	plugins
+ * @uses	rcube_plugin
+ * @author	Jasper Slits <jaspersl at gmail dot com>
+ * @version	1.9
+ * @license     GPL
+ * @link	https://sourceforge.net/projects/rcubevacation/
+ * @todo	See README.TXT
  */
 
 class VacationDriverFactory {

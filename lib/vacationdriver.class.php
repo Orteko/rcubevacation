@@ -1,4 +1,16 @@
 <?php
+/*
+ * VacationDriver base class
+ *
+ * @package	plugins
+ * @uses	rcube_plugin
+ * @author	Jasper Slits <jaspersl at gmail dot com>
+ * @version	1.9
+ * @license     GPL
+ * @link	https://sourceforge.net/projects/rcubevacation/
+ * @todo	See README.TXT
+ */
+
 abstract class VacationDriver {
 	protected $cfg,$dotforward = array();
 	protected $rcmail,$user,$forward,$body,$subject,$aliases = "";

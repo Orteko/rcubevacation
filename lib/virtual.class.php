@@ -1,4 +1,15 @@
 <?php
+/*
+ * Virtual/SQL driver
+ *
+ * @package	plugins
+ * @uses	rcube_plugin
+ * @author	Jasper Slits <jaspersl at gmail dot com>
+ * @version	1.9
+ * @license     GPL
+ * @link	https://sourceforge.net/projects/rcubevacation/
+ * @todo	See README.TXT
+ */
 
 class Virtual extends VacationDriver {
 
@@ -6,7 +17,7 @@ class Virtual extends VacationDriver {
     private $db_user;
     
     public function init() {
-        // Use the DSN from db.inc.php or a dedicated DSN defined in config.inc.php
+        // Use the DSN from db.inc.php or a dedicated DSN defined in config.ini
 
         if (empty($this->cfg['dsn'])) {
             $this->db = $this->rcmail->db;
@@ -38,10 +49,10 @@ class Virtual extends VacationDriver {
         $sql = sprintf("SELECT subject,body,active FROM %s.vacation WHERE email='%s'",
                 $this->cfg['dbase'], Q($this->user->data['username']));
 
-
+		
         $res = $this->db->query($sql);
         if ($error = $this->db->is_error()) {
-            raise_error(array('code' => 601, 'type' => 'php', 'file' => __FILE__,
+            raise_error(array('code' => 601, 'type' => 'db', 'file' => __FILE__,
                         'message' => "Vacation plugin: query on {$this->cfg['dbase']}.vacation failed. Check DSN and verify that SELECT privileges on {$this->cfg['dbase']}.vacation are granted to user '{$this->db_user}'. <br/><br/>Error message:  " . $error), true, true);
         }
 
@@ -75,7 +86,6 @@ class Virtual extends VacationDriver {
 
         $this->db->query($sql);
 
-
         $update = ($this->db->affected_rows() == 1);
 
         // Delete the alias for the vacation transport (Postfix)
@@ -87,11 +97,12 @@ class Virtual extends VacationDriver {
                 $error = " Configure either domain_lookup_query or use %d in config.ini's delete_query rather than %i. <br/><br/>";
             }
 
-            raise_error(array('code' => 601, 'type' => 'php', 'file' => __FILE__,
+            raise_error(array('code' => 601, 'type' => 'db', 'file' => __FILE__,
                         'message' => "Vacation plugin: Error while saving records to {$this->cfg['dbase']}.vacation table. <br/><br/>" . $error
                     ), true, true);
 
         }
+
 
         // (Re)enable the vacation message and the vacation transport alias
         if ($this->enable && $this->body != "" && $this->subject != "") {
@@ -109,7 +120,7 @@ class Virtual extends VacationDriver {
                     $error = " Configure either domain_lookup_query or use \%d in config.ini's insert_query rather than \%i<br/><br/>";
                 }
 
-                raise_error(array('code' => 601, 'type' => 'php', 'file' => __FILE__,
+                raise_error(array('code' => 601, 'type' => 'db', 'file' => __FILE__,
                             'message' => "Vacation plugin: Error while saving records to {$this->cfg['dbase']}.vacation table. <br/><br/>" . $error
                         ), true, true);
             }
@@ -141,7 +152,7 @@ class Virtual extends VacationDriver {
 
             $this->db->query($sql);
             if ($error = $this->db->is_error()) {
-                raise_error(array('code' => 601, 'type' => 'php', 'file' => __FILE__,
+                raise_error(array('code' => 601, 'type' => 'db', 'file' => __FILE__,
                             'message' => "Vacation plugin: Error while executing {$this->cfg['insert_query']} <br/><br/>" . $error
                         ), true, true);
             }
@@ -166,7 +177,7 @@ class Virtual extends VacationDriver {
             $res = $this->db->query($this->translate($this->cfg['domain_lookup_query']));
 
             if (!$row= $this->db->fetch_array($res)) {
-                raise_error(array('code' => 601, 'type' => 'php', 'file' => __FILE__,
+                raise_error(array('code' => 601, 'type' => 'db', 'file' => __FILE__,
                             'message' => "Vacation plugin: domain_lookup_query did not return any row. Check config.ini <br/><br/>" . $this->db->is_error()
                         ), true, true);
 
@@ -230,7 +241,6 @@ class Virtual extends VacationDriver {
             // Postfix accepts multiple aliases on 1 row as well as an alias per row
             if (strpos($row, ",") !== false) {
                 $rows = explode(",", $row);
-
             } else {
                 $rows[] = $row;
             }

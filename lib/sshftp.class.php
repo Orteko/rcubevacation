@@ -4,9 +4,9 @@
  *
  * @package	plugins
  * @uses	rcube_plugin
- * @author	Jasper Slits <jaspersl@gmail.com>
- * @version	1.0
- * @license GPL
+ * @author	Jasper Slits <jaspersl at gmail dot com>
+ * @version	1.9
+ * @license     GPL
  * @link	https://sourceforge.net/projects/rcubevacation/
  * @todo	See README.TXT
  *
@@ -23,7 +23,6 @@ class SSHFTP extends VacationDriver {
 		$username = Q($this->user->data['username']);
 		$userpass = $this->rcmail->decrypt($_SESSION['password']);
 
-		//$callback = array("macerror"=>"my_macerror","debug"=>"my_debug");
 		$callback = array();
 				
 		if (! $this->conn = ssh2_connect($this->cfg['server'],22,null,$callback)) {
@@ -41,6 +40,7 @@ class SSHFTP extends VacationDriver {
 		}
 		
 		$this->ftp = ssh2_sftp($this->conn);
+
 		
 		// Once we have a succesfull login, discard user-sensitive data like password
 		$username = $userpass = null;
@@ -57,9 +57,11 @@ class SSHFTP extends VacationDriver {
 			$dot_vacation_msg = explode("\n",$dot_vacation_msg);
 			$vacArr['subject'] = str_replace('Subject: ','',$dot_vacation_msg[1]);
 			$vacArr['body'] = join("\n",array_slice($dot_vacation_msg,2));
-		} 
+		}
+                
 		if ($dotForwardFile = $this->downloadfile(".forward")) {
 			$d = new DotForward();
+                        $d->setOption("username",$this->user->data['username']);
 			$vacArr = array_merge($vacArr,$d->parse($dotForwardFile));
 		}
 		// Load aliases using the available identities
@@ -132,11 +134,6 @@ class SSHFTP extends VacationDriver {
 	private function ssh2_file_exists($remoteFile)
 	{
 		$stat = @ssh2_sftp_stat($this->ftp,$remoteFile);
-		if (is_array($stat)) {
-			printf("File %s has %d bytes<br/>",$remoteFile,$stat['size']);
-		} else {
-			printf("File %s has not been found<br/>",$remoteFile);
-		}
 		return (is_array($stat) && $stat['size'] != 0);
 	}
 
@@ -162,8 +159,9 @@ class SSHFTP extends VacationDriver {
 
 	// Upload a file. 
 	private function uploadfile($data,$remoteFile) {
-            $remoteFile = ssh2_sftp_realpath($this->ftp, $remoteFile);
-                if (file_put_contents($remoteFile, $data))
+            $remoteFile = ssh2_sftp_realpath($this->ftp,".")."/".$remoteFile;
+
+          if (! file_put_contents("ssh2.sftp://".$this->ftp.$remoteFile, $data))
                 {
                     raise_error(array('code' => 601,'type' => 'php','file' => __FILE__,
                 'message' => "Vacation plugin: Cannot upload {$remoteFile}. Check permissions and/or server configuration"
@@ -175,8 +173,12 @@ class SSHFTP extends VacationDriver {
 
 	// Download a file and return its content as a string or return false if the file cannot be found
 	private function downloadfile($remoteFile) {
-		$remoteFile = ssh2_sftp_realpath($this->ftp, $remoteFile);
-		return file_get_contents($remoteFile);
+		if ($this->ssh2_file_exists($remoteFile))
+		{
+			$remoteFile = ssh2_sftp_realpath($this->ftp, ".")."/".$remoteFile;
+			return file_get_contents("ssh2.sftp://".$this->ftp.$remoteFile);
+		}
+		return false;	
 	}
 
 

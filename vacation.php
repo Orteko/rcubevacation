@@ -6,7 +6,7 @@
  * @package	plugins
  * @uses	rcube_plugin
  * @author	Jasper Slits <jaspersl@gmail.com>
- * @version	1.8
+ * @version	1.9
  * @license     GPL
  * @link	https://sourceforge.net/projects/rcubevacation/
  * @todo	See README.TXT
@@ -70,7 +70,7 @@ class vacation extends rcube_plugin {
         $this->v->init();
 
         if ($this->v->save()) {
-//          $this->v->getActionText()
+//          $this->v->getActionText() Dummy for now
             $rcmail->output->show_message($this->gettext("success_changed"), 'confirmation');
         } else {
             $rcmail->output->show_message($this->gettext("failed"), 'error');
