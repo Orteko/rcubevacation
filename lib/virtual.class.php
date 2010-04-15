@@ -28,6 +28,8 @@ class Virtual extends VacationDriver {
 
             $this->db->set_debug((bool) $this->rcmail->config->get('sql_debug'));
             $dsn = MDB2::parseDSN($this->cfg['dsn']);
+            $this->db->set_debug(true);
+
         }
         // Save username for error handling
         $this->db_user = $dsn['username'];

@@ -16,19 +16,38 @@ class VacationConfig
 	private $currentHost = null;
 	private $iniArr,$currentArr = array();
 	private $hasError = false;
-	private $allowedOptions = array('none'=>array(),'ftp'=>array(),'sshftp'=>array(),'virtual'=>array(),'setuid'=>array());
+	private $allowedOptions = array('none'=>array(),'ftp'=>array(),'sshftp'=>array(),
+            'virtual'=>array(),'sieve'=>array(),'setuid'=>array());
 
 	public function __construct()
 	{
-		// Allowed options in config.ini per driver
-		$this->allowedOptions['ftp'] = array('server'=>'optional','passive'=>'optional');
-		$this->allowedOptions['sshftp'] = array('server'=>'optional');
-		$this->allowedOptions['virtual'] = array('dsn'=>'optional','transport'=>'required','dbase'=>'required','always_keep_copy'=>'optional',
-			'domain_lookup_query'=>'optional', 'select_query'=>'required','delete_query'=>'required', 'insert_query'=>'required','createvacationconf'=>'optional','always_keep_message'=>'optional');
-		$this->allowedOptions['setuid'] = array('executable'=>'required');
-		
+            // Allowed options in config.ini per driver
+            $this->allowedOptions['ftp'] = array('server'=>'optional','passive'=>'optional','disable_forward'=>'optional');
+            $this->allowedOptions['sshftp'] = array('server'=>'optional','disable_forward'=>'optional');
+            $this->allowedOptions['virtual'] = array('dsn'=>'optional','transport'=>'required','dbase'=>'required','always_keep_copy'=>'optional',
+		'domain_lookup_query'=>'optional', 'select_query'=>'required','delete_query'=>'required', 'insert_query'=>'required','createvacationconf'=>'optional','always_keep_message'=>'optional','disable_forward'=>'optional');
+            $this->allowedOptions['setuid'] = array('executable'=>'required','disable_forward'=>'optional');
+            $this->allowedOptions['sieve'] = array('server'=>'optional','disable_forward'=>'optional',
+                                                  'port'=>'optional','tls'=>'optional');
 		$this->parseIni();
 	}
+
+        /*
+         * @a
+         *
+         */
+
+        public function getDefaultText()
+        {
+            if (empty($this->iniArr['default']['defaultbody']) || empty($this->iniArr['default']['defaultbody'])) {
+                $defaults = array('body'=>"","subject"=>"");
+            } else {
+                $defaults = array('body'=>$this->iniArr['default']['defaultbody'],
+                    "subject"=>$this->iniArr['default']['defaultsubject']);
+            }
+            return $defaults;
+
+        }
 	
 	private function parseIni()
 	{
@@ -61,18 +80,25 @@ class VacationConfig
 		}
 	}
 
+        public function getDotForwardCfg()
+        {
+            
+            return $this->iniArr['dotforward'];
+
+        }
+
 	public function hasVacationEnabled()
 	{
-		
-		return ( $this->currentArr['driver'] != 'none');
+            return ( $this->currentArr['driver'] != 'none');
 	}
 
 	private function setServer()
 	{
-		if (in_array($this->currentArr['driver'],array('ftp','sshftp')) && empty($this->currentArr['server']))
-		{
-			$this->currentArr['server'] = $this->currentHost;
-		}
+            if (in_array($this->currentArr['driver'],array('ftp','sshftp','sieve'))
+                    && empty($this->currentArr['server']))
+            {
+		$this->currentArr['server'] = $this->currentHost;
+            }
 	}
 
 	public function getCurrentConfig()
@@ -130,7 +156,8 @@ class VacationConfig
 		{
 			if ($required=='required' && empty($this->currentArr[$key]))
 			{
-				$this->hasError = sprintf("Driver %s does not allow %s to be empty. Please edit config.ini",$this->currentArr['driver'],$key);
+				$this->hasError = sprintf("Driver %s does not allow 
+                                     '%s' to be empty. Please edit config.ini",$this->currentArr['driver'],$key);
 				return false;
 			}
 		}
@@ -139,10 +166,12 @@ class VacationConfig
 
 	private function checkAllowedParameters()
 	{
+
 		$keys = $this->allowedOptions[$this->currentArr['driver']];
 		$diff = array_diff_key($this->currentArr,array_flip(array_keys($keys)));
-		unset($diff['driver']);
-		if (! empty($diff))
+	
+             
+		if (! empty($diff) && !in_array(key($diff),array('driver','body','subject')))
 		{
 			// Invalid options found
 			$this->hasError = sprintf("Invalid option found in config.ini for %s driver and section [%s]: %s is not supported",

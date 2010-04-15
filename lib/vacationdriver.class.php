@@ -6,7 +6,7 @@
  * @uses	rcube_plugin
  * @author	Jasper Slits <jaspersl at gmail dot com>
  * @version	1.9
- * @license     GPL
+ * @license GPL
  * @link	https://sourceforge.net/projects/rcubevacation/
  * @todo	See README.TXT
  */
@@ -20,6 +20,12 @@ abstract class VacationDriver {
 	abstract public function init();
 	abstract protected function setVacation();
 
+        protected function show_error($code,$type,$file,$message)
+        {
+            
+
+        }
+
 	// Provide easy access for the drivers to frequently used objects
 	public function __construct() {
 		$this->rcmail = rcmail::get_instance();
@@ -27,17 +33,20 @@ abstract class VacationDriver {
 		$this->identity = $this->user->get_identity();
 		$child_class = strtolower( get_class($this));
 	}
-	
+
+        /*
+        
+         */
 	public final function setIniConfig(array $inicfg)
 	{
 		$this->cfg = $inicfg;
 	}
-	
-	public final function setDotForwardConfig($child_class) {
+
+
+	public final function setDotForwardConfig($child_class,$config) {
 		// forward settings are shared by ftp,sshftp and setuid driver. 
-		if (in_array($child_class ,array('ftp','sshftp','setuid')) 
-			&& is_array($this->rcmail->config->get('forward'))) {
-			$this->dotforward = $this->rcmail->config->get('forward');
+		if (in_array($child_class ,array('ftp','sshftp','setuid'))) {
+			$this->dotforward = $config;
 		}
 	}
 
@@ -47,33 +56,26 @@ abstract class VacationDriver {
 
 		return (isset($this->dotforward['alias_identities']) && $this->dotforward['alias_identities']);
 	}
-	
-	public function loadDefaults()
-	{
-		// Load default subject and body.
-		if ($defaults_cfg = $this->rcmail->config->get('default')) 
-		{
-			if (empty($defaults_cfg['body'])) return false;
-			
-			
-			$file = "plugins/vacation/".$defaults_cfg['body'];
-			
-			
-			if (is_readable($file))
-			{
-				$defaults = array('subject'=>$defaults_cfg['subject']);
-				$defaults['body'] = file_get_contents($file);
-				return $defaults;
-			} else {
-				 raise_error(array('code' => 601,'type' => 'php','file' => __FILE__,
-                'message' => sprintf("Vacation plugin: s cannot be opened",$file)
-                ),true, true);
-			}
-			
-		} else {
-			return false;
-		}
-	}
+
+public function loadDefaults() {
+    // Load default subject and body.
+
+    if (empty($this->cfg['body'])) return false;
+
+
+    $file = "plugins/vacation/" . $this->cfg['body'];
+    
+
+    if (is_readable($file)) {
+        $defaults = array('subject'=>$this->cfg['subject']);
+        $defaults['body'] = file_get_contents($file);
+        return $defaults;
+    } else {
+        raise_error(array('code' => 601, 'type' => 'php', 'file' => __FILE__,
+                    'message' => sprintf("Vacation plugin: s cannot be opened", $file)
+                ), true, true);
+    }
+}
 	
 	
 
@@ -100,7 +102,7 @@ abstract class VacationDriver {
 
 		if (empty($identities))
 		{
-			// No identities found.
+			// No identities found. For future use?
 			$str = "To use aliases, add more identities.";
 		}
 
@@ -125,10 +127,22 @@ abstract class VacationDriver {
 		$this->forward = get_input_value('_vacation_forward', RCUBE_INPUT_POST);
 		$this->aliases = get_input_value('_vacation_aliases', RCUBE_INPUT_POST);
 
+                // Preserve existing forwards if they're disabled (disable_forward=true).
+                // Don't rely on user submitted data.
+                if (isset($this->cfg['disable_forward']) && $this->cfg['disable_forward'])
+                {
+                    $getArr = $this->_get();
+                    if (!empty($getArr['forward']))
+                    {
+                        $this->forward = $getArr['forward'];
+                    }
+                }
+
 		// This method performs the actual work
 		return $this->setVacation();
 	}
 
+        /* For future use */
 	final public function getActionText()
 	{
 		if ($this->enable && empty($this->forward)) { return "enabled_and_no_forward"; };

@@ -3,7 +3,7 @@ About
 The vacation plugin allows mail to be forwarded and/or auto-replied with a
 custom subject / message body.
 Note that the actual auto-reply is done by a program such as /usr/bin/vacation
-or the virtual user aware vacation.pl
+,the virtual user aware vacation.pl or a Sieve script.
 
 
 Features
@@ -28,6 +28,7 @@ LICENSE in Roundcube's root directory for more information about the license.
 Available drivers
 ------------------
 The following drivers are available to do the low level work:
+- Sieve. This driver uses ManagedSieve to set/get the Sieve script for sending mail.
 - FTP. This driver uploads the .forward file to the user's homedirectory.
 - SSHFTP. This driver uses SSH to upload .forward file to the user's homedirectory.
 - Setuid. This driver places the .forward file in the user's homedirectory using
@@ -48,14 +49,14 @@ The FTP driver establishes an FTP-connection to the current IMAP-host or the ser
 specified in config.ini
 The login credentials of the current user are used to login to the FTP-server.   
 
-If .forward exists and it contains /usr/bin/vacation (as specified in config.inc.php),
+If .forward exists and it contains /usr/bin/vacation (as specified in config.ini),
 the out of office is enabled. 
 
 If there are any forwarding addresses found in .forward, these are displayed to the user.
 
-If alias_identities = true (config.inc.php) and there are any aliases found in .forward,
+If alias_identities = true and there are any aliases found in .forward,
 these are displayed to the user.
-If alias_identities = true (config.inc.php) and there are no aliases found in .forward,
+If alias_identities = true and there are no aliases found in .forward,
  the identities are loaded and shown. 
 
 An alias contains no domain as it's limited to normal system users (/etc/passwd).
@@ -63,7 +64,7 @@ If there is more than one identity present, the button 'Get aliases' is shown.
 
 In either case it then downloads the .vacation.msg file that contains both
  message body and subject. If .vacation.msg cannot be found,
-it uses the default body and subject as defined in 'config.inc.php'.
+it uses the default body and subject as defined in 'config.ini'.
 
 Requirements for using this driver:
 - A working FTP-server that allows users to login to their $HOME directory.
@@ -82,6 +83,13 @@ The SSHFTP behaves just like the FTP driver.
 Requirements for using this driver:
 - Requires PECL package to be installed. See http://nl2.php.net/manual/en/ssh2.installation.php
 - The SMTP-server must use .forward files in the $HOME directory
+
+Sieve driver
+------------
+TBD
+http://wiki.dovecot.org/ManageSieve/Configuration
+
+
 
 
 Setuid Driver
@@ -106,7 +114,7 @@ and recompile squirrelmail_vacation_proxy using 'make'.
 Requirement for using .forward files
 ------------------------------------
 The SSHFTP, FTP and setuid backend all use .forward files.
-See config.inc.php for available options, like enabling identities, keeping copies etc.
+See config.ini for available options, like enabling identities, keeping copies etc.
 
 If you want to use one of these drivers, please note: 
 - The /usr/bin/binary must create .vacation.db when it is missing.
@@ -170,7 +178,7 @@ This pseudo driver disables the Vacation tab for hosts that do not support Out o
 
 Writing a new driver
 --------------------
-1) Create relevant entries in config.inc.php. The name of array key must match the class name.
+1) Create relevant entries in config.ini. The name of array key must match the class name.
 3) Create lib/$driver.class.php
 3) Have your new driver extend VacationDriver
 4) Implement abstract public methods from base class: init(), setVacation(),_get()

@@ -70,7 +70,7 @@ class DotForward {
 
         // If there is no binary set, we do not send an out office reply.
         if ($this->options['binary'] != "") {
-            return sprintf('%s%s%s,|"%s %s %s"', $this->options['keepcopy'], $this->options['username'],
+            return sprintf('%s%s%s"|%s %s %s"', $this->options['keepcopy'], $this->options['username'],
                     $this->options['forward'],
                     $this->options['binary'], $this->options['flags'], $this->options['username']);
 
