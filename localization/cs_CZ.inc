@@ -1,8 +1,8 @@
 <?php
-// v pripade chyb nebo novych hlasek mne kontaktujte 
-// na adrese pm@kostax.cz
-// dekuji
-// Petr Macek
+// utf-8, author Petr Macek (pm@kostax.cz)
+// works fine with 1.9.9 and bellow
+// errors, new messages? please contact me
+
 
 $labels = array();
 $labels['vacation'] = 'Dovolená';
