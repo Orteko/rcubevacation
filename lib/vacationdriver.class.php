@@ -6,7 +6,7 @@
  * @uses	rcube_plugin
  * @author	Jasper Slits <jaspersl at gmail dot com>
  * @version	1.9
- * @license GPL
+ * @license     GPL
  * @link	https://sourceforge.net/projects/rcubevacation/
  * @todo	See README.TXT
  */
@@ -19,12 +19,6 @@ abstract class VacationDriver {
 	abstract public function _get();
 	abstract public function init();
 	abstract protected function setVacation();
-
-        protected function show_error($code,$type,$file,$message)
-        {
-            
-
-        }
 
 	// Provide easy access for the drivers to frequently used objects
 	public function __construct() {
@@ -102,8 +96,8 @@ public function loadDefaults() {
 
 		if (empty($identities))
 		{
-			// No identities found. For future use?
-			$str = "To use aliases, add more identities.";
+			// No identities found.
+//			$str = "To use aliases, add more identities.";
 		}
 
 		if ($method != null)
@@ -127,22 +121,10 @@ public function loadDefaults() {
 		$this->forward = get_input_value('_vacation_forward', RCUBE_INPUT_POST);
 		$this->aliases = get_input_value('_vacation_aliases', RCUBE_INPUT_POST);
 
-                // Preserve existing forwards if they're disabled (disable_forward=true).
-                // Don't rely on user submitted data.
-                if (isset($this->cfg['disable_forward']) && $this->cfg['disable_forward'])
-                {
-                    $getArr = $this->_get();
-                    if (!empty($getArr['forward']))
-                    {
-                        $this->forward = $getArr['forward'];
-                    }
-                }
-
 		// This method performs the actual work
 		return $this->setVacation();
 	}
 
-        /* For future use */
 	final public function getActionText()
 	{
 		if ($this->enable && empty($this->forward)) { return "enabled_and_no_forward"; };

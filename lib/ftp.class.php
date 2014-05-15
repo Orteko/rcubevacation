@@ -62,6 +62,7 @@ class FTP extends VacationDriver {
 			$d = new DotForward();
                         $d->setOption("username",$this->user->data['username']);
 			$vacArr = array_merge($vacArr,$d->parse($dotForwardFile));
+
 		}
 		// Load aliases using the available identities
 		if (! $vacArr['enabled']) $vacArr['aliases'] = $this->vacation_aliases("method");

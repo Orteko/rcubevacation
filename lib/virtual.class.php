@@ -112,11 +112,11 @@ class Virtual extends VacationDriver {
             if (!$update) {
                 $sql = "INSERT INTO {$this->cfg['dbase']}.vacation  VALUES (?,?,?,'',?,NOW(),1)";
             } else {
-                $sql = "UPDATE {$this->cfg['dbase']}.vacation SET email=?,subject=?,body=?,domain=?,active=1";
+                $sql = "UPDATE {$this->cfg['dbase']}.vacation SET email=?,subject=?,body=?,domain=?,active=1 WHERE email=?";
             }
 
 
-            $this->db->query($sql, Q($this->user->data['username']), $this->subject, $this->body, $this->domain);
+            $this->db->query($sql, Q($this->user->data['username']), $this->subject, $this->body, $this->domain,Q($this->user->data['username']));
             if ($error = $this->db->is_error()) {
                 if (strpos($error, "no such field")) {
                     $error = " Configure either domain_lookup_query or use \%d in config.ini's insert_query rather than \%i<br/><br/>";

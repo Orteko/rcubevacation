@@ -1,12 +1,10 @@
 Installation procedure
 ----------------------
-1) Unzip vacation.tar.gz in plugins/ 
+1) Unzip vacation.tar.gz in plugins/
 2) Enable the vacation plugin in config/main.inc.php: $rcmail_config['plugins'] = array('vacation');
-3) Open plugins/vacation/config.inc.php in your editor and change the settings if needed.
-4) Configure plugins/vacation/config.ini and change the settings if needed.
-5) chown $apache_user plugins/vacation/config.inc.php
-6) chmod 0400 plugins/vacation/config.inc.php
-7) chmod 0400 plugins/vacation/config.ini
+3) Open plugins/vacation/config.ini in your editor and change the settings if needed.
+4) chown $apache_user plugins/vacation/config.ini
+5) chmod 0400 plugins/vacation/config.ini
 
 See README.TXT for additional information and requirements for each driver.
 
@@ -15,10 +13,10 @@ Valid config.ini configuration options
 
 An optional default subject and bodytext can be specified using:
 
-defaultsubject = "Out of office"
-defaultbody = "default.txt"
+subject = "Out of office"
+body = "default.txt"
 
-The defaultbody refers to a template textfile that contains a default text.
+The body refers to a template textfile that contains a default text.
 No HTML can be used in this template.
 
 
@@ -87,17 +85,17 @@ Aliases are recreated when saving vacation settings. Required.
 Query to create new aliases. Required.
 
 - domain_lookup_query = "SELECT id FROM postfix.virtual_domains WHERE name='%d'"
-Required if you use a domain_id for storing the domain's in the alias table. 
+Required if you use a domain_id for storing the domain's in the alias table.
 
 - createvacationconf = true
 Creates /etc/postfixadmin/vacation.conf which has database configuration for the vacation.pl script. Optional.
 It uses the selected DSN to create the file. Make sure this file is only readable
- by the vacation user after it's created. 
+ by the vacation user after it's created.
 If unset or false, you must edit vacation.pl manually and set database accordingly.
- 
+
 - always_keep_message = true
 If vacation/auto-reply gets disabled, should we delete the subject/body set by the end-user?
-Optional. Defaults to true. 
+Optional. Defaults to true.
 
 - disable_forward = False
 If set to True, the end-user will not be able to set forwards. Defaults to false. Optional
@@ -134,7 +132,7 @@ If vacation/auto-reply gets disabled, should we keep the .vacation.msg? Optional
 Protecting config.ini
 ---------------------
 If you use the 'virtual' driver, it's recommended to protect config.ini from
-being accessed directly using a browser.  
+being accessed directly using a browser.
 In the root of the plugin directory, you'll find .htaccess that prevents DSN
 password in config.ini from being exposed.
 

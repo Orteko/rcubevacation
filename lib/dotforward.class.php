@@ -33,19 +33,18 @@ class DotForward {
 
 // Creates the content for the .forward file
     public function create() {
+	$arrDotForward = array();
+
 
         // If keep copy is not enabled, do not use \username. 
-        if (! $this->options['keepcopy'])
+        if ($this->options['keepcopy'])
         {
-            $this->options['username'] = $this->options['keepcopy'] = "";
-        } else {
-            $this->options['keepcopy'] = "\\";
+            $arrDotForward[] = $this->options['keepcopy'] = "\\".$this->options['username'];
         }
 
         if ($this->options['forward'] != null && $this->options['forward'] != "") {
             // Only when keepcopy is enabled, use a comma
-            $append = ($this->options['keepcopy']=="\\") ? "," : "";
-            $this->options['forward'] = $append . $this->options['forward'];
+            $arrDotForward[] = $this->options['forward'];
         }
 
         // Create aliases
@@ -65,29 +64,33 @@ class DotForward {
         if ($this->options['envelop_sender'] != null) {
             $this->options['flags'] .= " -R " . $this->options['envelop_sender'];
         }
+		
 
 
 
         // If there is no binary set, we do not send an out office reply.
         if ($this->options['binary'] != "") {
-            return sprintf('%s%s%s"|%s %s %s"', $this->options['keepcopy'], $this->options['username'],
-                    $this->options['forward'],
-                    $this->options['binary'], $this->options['flags'], $this->options['username']);
+            $arrDotForward[] = sprintf('"|%s %s %s"',$this->options['binary'], $this->options['flags'], $this->options['username']);
 
-        } else {
-            // Just set a forwarding address
-            return sprintf("%s%s%s", $this->options['keepcopy'], $this->options['username'], $this->options['forward']);
+        } 
 
-        }
+	return join(",",$arrDotForward);
+        
     }
     
     public function parse($dotForward) {
 
         // Clean up the .forward file for easier parsing
         $dotForward = str_replace(array("|", "\"", "\\"), "", $dotForward);
+
+		
+
         $arr = explode(",", trim($dotForward));
 
         $first_element = array_shift($arr);
+
+		// @TODO: test to see if $first_element equals vacation binary
+
         $this->options['keepcopy'] = ($first_element == $this->options['username']);
         if (!$this->options['keepcopy']) { $this->options['forward'] = $first_element; }
 
