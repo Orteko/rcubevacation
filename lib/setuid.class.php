@@ -11,12 +11,12 @@
  * @link	https://sourceforge.net/projects/rcubevacation/
  * @todo	See README.TXT
 */
-class setuid extends VacationDriver {
-
+class setuid extends VacationDriver
+{
     private $webserver_user = null;
-    
-    public function init() {
 
+    public function init()
+    {
         // The setuid executable needs to be executable
         $this->webserver_user = getenv('APACHE_RUN_USER');
         if (empty($this->webserver_user)) {
@@ -43,7 +43,8 @@ class setuid extends VacationDriver {
     }
 
 // Download .forward and .vacation.msg file
-    public function _get() {
+    public function _get()
+    {
         $vacArr = array("subject"=>"", "body"=>"", "forward"=>"", "keepcopy"=>true, "enabled"=>false);
 
         if ($vacation_msg = $this->downloadfile($this->dotforward['message'])) {
@@ -60,12 +61,11 @@ class setuid extends VacationDriver {
 
         // Load aliases using the available identities
         if (!$vacArr['enabled']) $vacArr['aliases'] = $this->vacation_aliases("method");
-
         return $vacArr;
     }
-    
-    protected function setVacation() {
 
+    protected function setVacation()
+    {
         // Remove existing vacation files
         $this->disable();
 
@@ -105,12 +105,14 @@ class setuid extends VacationDriver {
             }
             $this->uploadfile($d->create(), ".forward");
         }
+
         return true;
     }
-    
-    private function disable() {
+
+    private function disable()
+    {
         /*
-		 * Syntax:	squirrelmail_vacation_proxy  server user password action source destination
+         * Syntax:	squirrelmail_vacation_proxy  server user password action source destination
         */
         $deleteFiles = array($this->dotforward['message'], ".forward", $this->dotforward['database']);
         if (isset($this->dotforward['always_keep_message']) && $this->dotforward['always_keep_message']) {
@@ -132,12 +134,13 @@ class setuid extends VacationDriver {
     }
 
     /*Removes the aliases
-	 *
-	 * @param string data
-	 * @param string remoteFile
-	 * @return boolean
+     *
+     * @param string data
+     * @param string remoteFile
+     * @return boolean
     */
-    private function uploadfile($data, $remoteFile) {
+    private function uploadfile($data, $remoteFile)
+    {
         $result = 0;
         $localFile = tempnam(sys_get_temp_dir(), 'Vac');
         file_put_contents($localFile, trim($data));
@@ -147,17 +150,18 @@ class setuid extends VacationDriver {
                 $this->rcmail->decrypt($_SESSION['password']), $localFile, $remoteFile);
         exec($command, $resArr, $result);
         unlink($localFile);
+
         return $result;
     }
-    
-    private function downloadfile($remoteFile) {
+
+    private function downloadfile($remoteFile)
+    {
         $result = 0;
         $localFile = tempnam(sys_get_temp_dir(), 'Vac');
         $command = sprintf('%s localhost %s "%s"  get %s %s',
                 $this->cfg['executable'],
                 Q($this->user->data['username']),
                 $this->rcmail->decrypt($_SESSION['password']), $remoteFile, $localFile);
-
 
         exec($command, $resArr, $result);
 
@@ -174,8 +178,7 @@ class setuid extends VacationDriver {
             $content = false;
         }
         unlink($localFile);
+
         return $content;
     }
 }
-
-?>

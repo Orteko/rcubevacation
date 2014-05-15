@@ -11,12 +11,13 @@
  * @todo	See README.TXT
  */
 
-class Virtual extends VacationDriver {
-
+class Virtual extends VacationDriver
+{
     private $db, $domain, $domain_id, $goto = "";
     private $db_user;
-    
-    public function init() {
+
+    public function init()
+    {
         // Use the DSN from db.inc.php or a dedicated DSN defined in config.ini
 
         if (empty($this->cfg['dsn'])) {
@@ -41,9 +42,10 @@ class Virtual extends VacationDriver {
     }
 
     /*
-	 * @return Array Values for the form
+     * @return Array Values for the form
     */
-    public function _get() {
+    public function _get()
+    {
         $vacArr = array("subject"=>"", "body"=>"");
         //   print_r($vacArr);
         $fwdArr = $this->virtual_alias();
@@ -51,14 +53,11 @@ class Virtual extends VacationDriver {
         $sql = sprintf("SELECT subject,body,active FROM %s.vacation WHERE email='%s'",
                 $this->cfg['dbase'], Q($this->user->data['username']));
 
-		
         $res = $this->db->query($sql);
         if ($error = $this->db->is_error()) {
             raise_error(array('code' => 601, 'type' => 'db', 'file' => __FILE__,
                         'message' => "Vacation plugin: query on {$this->cfg['dbase']}.vacation failed. Check DSN and verify that SELECT privileges on {$this->cfg['dbase']}.vacation are granted to user '{$this->db_user}'. <br/><br/>Error message:  " . $error), true, true);
         }
-
-
 
         if ($row = $this->db->fetch_assoc($res)) {
             $vacArr['body'] = $row['body'];
@@ -66,14 +65,14 @@ class Virtual extends VacationDriver {
             $vacArr['enabled'] = ($row['active'] == 1) && ($fwdArr['enabled'] == 1);
         }
 
-
         return array_merge($fwdArr, $vacArr);
     }
 
     /*
-	 * @return boolean True on succes, false on failure
+     * @return boolean True on succes, false on failure
     */
-    public function setVacation() {
+    public function setVacation()
+    {
         // If there is an existing entry in the vacation table, delete it.
         // This also triggers the cascading delete on the vacation_notification, but's ok for now.
 
@@ -159,20 +158,23 @@ class Virtual extends VacationDriver {
                         ), true, true);
             }
         }
+
         return true;
     }
 
     /*
-	 * @return string SQL query with substituted parameters
+     * @return string SQL query with substituted parameters
     */
-    private function translate($query) {
+    private function translate($query)
+    {
         return str_replace(array('%e', '%d', '%i', '%g', '%f', '%m'),
                 array($this->user->data['username'], $this->domain, $this->domain_id,
                     Q($this->user->data['username']) . "@" . $this->cfg['transport'], $this->forward, $this->cfg['dbase']), $query);
     }
 
 // Sets %i. Lookup the domain_id based on the domainname. Returns the domainname if the query is empty
-    private function domainLookup() {
+    private function domainLookup()
+    {
         // Sets the domain
         list($username, $this->domain) = explode("@", $this->user->get_username());
         if (!empty($this->cfg['domain_lookup_query'])) {
@@ -184,6 +186,7 @@ class Virtual extends VacationDriver {
                         ), true, true);
 
             }
+
             return $row[0];
         } else {
             return $this->domain;
@@ -191,12 +194,12 @@ class Virtual extends VacationDriver {
     }
 
     /*Creates configuration file for vacation.pl
-	 *
-	 * @param array dsn
-	 * @return void
+     *
+     * @param array dsn
+     * @return void
     */
-    private function createVirtualConfig(array $dsn) {
-
+    private function createVirtualConfig(array $dsn)
+    {
         $virtual_config = "/etc/postfixadmin/";
         if (!is_writeable($virtual_config)) {
             raise_error(array('code' => 601, 'type' => 'php', 'file' => __FILE__,
@@ -223,10 +226,11 @@ class Virtual extends VacationDriver {
     }
 
     /*
-			Retrieves the localcopy and/or forward settings.
-		* @return array with virtual aliases
+            Retrieves the localcopy and/or forward settings.
+        * @return array with virtual aliases
     */
-    private function virtual_alias() {
+    private function virtual_alias()
+    {
         $forward = "";
         $enabled = false;
         $goto = Q($this->user->data['username']) . "@" . $this->cfg['transport'];
@@ -270,11 +274,10 @@ class Virtual extends VacationDriver {
     }
 
 // Destroy the database connection of our temporary database connection
-    public function __destruct() {
+    public function __destruct()
+    {
         if (!empty($this->cfg['dsn']) && is_resource($this->db)) {
             $this->db = null;
         }
     }
 }
-
-?>

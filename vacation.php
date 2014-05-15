@@ -18,21 +18,20 @@ require 'lib/dotforward.class.php';
 require 'lib/vacationfactory.class.php';
 require 'lib/VacationConfig.class.php';
 
-class vacation extends rcube_plugin {
-    
+class vacation extends rcube_plugin
+{
     public $task = 'settings';
     private $v = "";
     private $inicfg = "";
     private $enableVacationTab = true;
     private $vcObject;
-    
-    public function init() {
+
+    public function init()
+    {
         $this->add_texts('localization/', array('vacation'));
         $this->load_config();
-        
-        $this->inicfg = $this->readIniConfig();
 
-        
+        $this->inicfg = $this->readIniConfig();
 
         // Don't proceed if the current host does not support vacation
         if (!$this->enableVacationTab) {
@@ -52,20 +51,22 @@ class vacation extends rcube_plugin {
         $this->rcmail = rcmail::get_instance();
         $this->user = $this->rcmail->user;
         $this->identity = $this->user->get_identity();
-        
+
         // forward settings are shared by ftp,sshftp and setuid driver.
         $this->v->setDotForwardConfig($this->inicfg['driver'],$this->vcObject->getDotForwardCfg());
     }
-    
-    public function vacation_init() {
+
+    public function vacation_init()
+    {
         $this->add_texts('localization/', array('vacation'));
         $rcmail = rcmail::get_instance();
         $rcmail->output->set_pagetitle($this->gettext('autoresponder'));
         //Load template
         $rcmail->output->send('vacation.vacation');
     }
-    
-    public function vacation_save() {
+
+    public function vacation_save()
+    {
         $rcmail = rcmail::get_instance();
 
         // Initialize the driver
@@ -81,7 +82,8 @@ class vacation extends rcube_plugin {
     }
 
     // Parse config.ini and get configuration for current host
-    private function readIniConfig() {
+    private function readIniConfig()
+    {
         $this->vcObject = new VacationConfig();
         $this->vcObject->setCurrentHost($_SESSION['imap_host']);
         $config = $this->vcObject->getCurrentConfig();
@@ -94,8 +96,9 @@ class vacation extends rcube_plugin {
 
         return $config;
     }
-    
-    public function vacation_form() {
+
+    public function vacation_form()
+    {
         $rcmail = rcmail::get_instance();
         // Initialize the driver
         $this->v->init();
@@ -138,11 +141,11 @@ class vacation extends rcube_plugin {
 
         /* We only use aliases for .forward and only if it's enabled in the config*/
         if ($this->v->useAliases()) {
-		$size = 0;
+        $size = 0;
 
-		// If there are no multiple identities, hide the button and add increase the size of the textfield
-		$hasMultipleIdentities = $this->v->vacation_aliases('buttoncheck');
-		if ($hasMultipleIdentities == '') $size = 15;
+        // If there are no multiple identities, hide the button and add increase the size of the textfield
+        $hasMultipleIdentities = $this->v->vacation_aliases('buttoncheck');
+        if ($hasMultipleIdentities == '') $size = 15;
 
                 $field_id = 'vacation_aliases';
                 $input_autoresponderalias = new html_inputfield(array('name' => '_vacation_aliases', 'id' => $field_id, 'size' => 75+$size));
@@ -151,44 +154,39 @@ class vacation extends rcube_plugin {
             // Inputfield with button
             $out .= sprintf('<p><label for="%s">%s</label>&nbsp;%s
               ', $field_id, rep_specialchars_output($this->gettext('aliases')),
-				  $input_autoresponderalias->show($settings['aliases']));
-			if ($hasMultipleIdentities!='')
-				$out .= sprintf('<input type="button" id="aliaslink" class="button" value="%s"/>',
-			  rep_specialchars_output($this->gettext('aliasesbutton')));
-			$out .= "</p>";
+                  $input_autoresponderalias->show($settings['aliases']));
+            if ($hasMultipleIdentities!='')
+                $out .= sprintf('<input type="button" id="aliaslink" class="button" value="%s"/>',
+              rep_specialchars_output($this->gettext('aliasesbutton')));
+            $out .= "</p>";
 
         }
         $out .= '</fieldset><fieldset><legend>' . $this->gettext('forward') . '</legend>';
 
-        	// Keep a local copy of the mail
-			$field_id = 'vacation_keepcopy';
-			$input_localcopy = new html_checkbox(array('name' => '_vacation_keepcopy', 'id' => $field_id, 'value' => 1));
-			$out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
-					$field_id,
-					rep_specialchars_output($this->gettext('keepcopy')),
-					$input_localcopy->show($settings['keepcopy']));
-			
+            // Keep a local copy of the mail
+            $field_id = 'vacation_keepcopy';
+            $input_localcopy = new html_checkbox(array('name' => '_vacation_keepcopy', 'id' => $field_id, 'value' => 1));
+            $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+                    $field_id,
+                    rep_specialchars_output($this->gettext('keepcopy')),
+                    $input_localcopy->show($settings['keepcopy']));
 
-
-		// Information on the forward in a seperate fieldset.
-		if (! isset($this->inicfg['disable_forward']) || ( isset($this->inicfg['disable_forward']) && $this->inicfg['disable_forward']==false))
-		{
+        // Information on the forward in a seperate fieldset.
+        if (! isset($this->inicfg['disable_forward']) || ( isset($this->inicfg['disable_forward']) && $this->inicfg['disable_forward']==false)) {
                         $out .= '<p>' . $this->gettext('separate_forward') . '</p>';
 
-			// Forward mail to another account
-			$field_id = 'vacation_forward';
-			$input_autoresponderforward = new html_inputfield(array('name' => '_vacation_forward', 'id' => $field_id, 'size' => 90));
-			$out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
-					$field_id,
-					rep_specialchars_output($this->gettext('forwardingaddresses')),
-					$input_autoresponderforward->show($settings['forward']));
+            // Forward mail to another account
+            $field_id = 'vacation_forward';
+            $input_autoresponderforward = new html_inputfield(array('name' => '_vacation_forward', 'id' => $field_id, 'size' => 90));
+            $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+                    $field_id,
+                    rep_specialchars_output($this->gettext('forwardingaddresses')),
+                    $input_autoresponderforward->show($settings['forward']));
 
-			
-		}
+        }
                 $out .= "</fieldset>\n";
         $rcmail->output->add_gui_object('vacationform', 'vacation-form');
+
         return $out;
     }
 }
-
-?>

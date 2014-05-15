@@ -11,8 +11,8 @@
  * @link	https://sourceforge.net/projects/rcubevacation/
  * @todo	See README.TXT
 */
-class DotForward {
-
+class DotForward
+{
     private $options = array("binary"=>"",
         "username"=>"",
         "flags"=>"",
@@ -23,22 +23,23 @@ class DotForward {
         "keepcopy"=>false);
 
 // set options to be used with create()
-    public function setOption($key, $value) {
+    public function setOption($key, $value)
+    {
         $this->options[$key] = $value;
     }
-    
-    public function mergeOptions(array $cfgArr) {
+
+    public function mergeOptions(array $cfgArr)
+    {
         $this->options = array_merge($this->options, $cfgArr);
     }
 
 // Creates the content for the .forward file
-    public function create() {
-	$arrDotForward = array();
+    public function create()
+    {
+    $arrDotForward = array();
 
-
-        // If keep copy is not enabled, do not use \username. 
-        if ($this->options['keepcopy'])
-        {
+        // If keep copy is not enabled, do not use \username.
+        if ($this->options['keepcopy']) {
             $arrDotForward[] = $this->options['keepcopy'] = "\\".$this->options['username'];
         }
 
@@ -64,32 +65,27 @@ class DotForward {
         if ($this->options['envelop_sender'] != null) {
             $this->options['flags'] .= " -R " . $this->options['envelop_sender'];
         }
-		
-
-
 
         // If there is no binary set, we do not send an out office reply.
         if ($this->options['binary'] != "") {
             $arrDotForward[] = sprintf('"|%s %s %s"',$this->options['binary'], $this->options['flags'], $this->options['username']);
 
-        } 
+        }
 
-	return join(",",$arrDotForward);
-        
+    return join(",",$arrDotForward);
+
     }
-    
-    public function parse($dotForward) {
 
+    public function parse($dotForward)
+    {
         // Clean up the .forward file for easier parsing
         $dotForward = str_replace(array("|", "\"", "\\"), "", $dotForward);
-
-		
 
         $arr = explode(",", trim($dotForward));
 
         $first_element = array_shift($arr);
 
-		// @TODO: test to see if $first_element equals vacation binary
+        // @TODO: test to see if $first_element equals vacation binary
 
         $this->options['keepcopy'] = ($first_element == $this->options['username']);
         if (!$this->options['keepcopy']) { $this->options['forward'] = $first_element; }
@@ -122,5 +118,3 @@ class DotForward {
         return $this->options;
     }
 }
-
-?>
