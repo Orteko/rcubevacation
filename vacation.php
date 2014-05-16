@@ -28,6 +28,7 @@ class vacation extends rcube_plugin
 
     public function init()
     {
+
         $this->add_texts('localization/', array('vacation'));
         $this->load_config();
 
@@ -44,7 +45,7 @@ class vacation extends rcube_plugin
         $this->add_hook('settings_actions', array($this, 'settings_actions'));
         $this->register_action('plugin.vacation', array($this, 'vacation_init'));
         $this->register_action('plugin.vacation-save', array($this, 'vacation_save'));
-        $this->register_handler('plugin.vacation_form', array($this, 'vacation_form'));
+        //$this->register_handler('plugin.vacation_form', array($this, 'vacation_form'));
         // The vacation_aliases method is defined in vacationdriver.class.php so use $this->v here
         $this->register_action('plugin.vacation_aliases', array($this->v, 'vacation_aliases'));
         $this->include_script('vacation.js');
@@ -67,10 +68,13 @@ class vacation extends rcube_plugin
     public function vacation_init()
     {
         $this->add_texts('localization/', array('vacation'));
+        $this->register_handler('plugin.body', array($this, 'vacation_form'));
         $rcmail = rcmail::get_instance();
         $rcmail->output->set_pagetitle($this->gettext('autoresponder'));
         //Load template
-        $rcmail->output->send('vacation.vacation');
+        $rcmail->output->set_pagetitle($this->gettext('vacation'));
+        $rcmail->output->send('plugin');
+        //$rcmail->output->send('vacation.vacation');
     }
 
     public function vacation_save()
@@ -122,11 +126,14 @@ class vacation extends rcube_plugin
         // return the complete edit form as table
         $out = '<fieldset><legend>' . $this->gettext('outofoffice') . ' ::: ' . $rcmail->user->data['username'] . '</legend>' . "\n";
         // show autoresponder properties
+        //
+
+        $out .= '<table>';
 
         // Auto-reply enabled
         $field_id = 'vacation_enabled';
         $input_autoresponderactive = new html_checkbox(array('name' => '_vacation_enabled', 'id' => $field_id, 'value' => 1));
-        $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+        $out .= sprintf("<tr><td class=\"title\"><label for=\"%s\">%s</label></td><td>%s</td></tr>\n",
                 $field_id,
                 rep_specialchars_output($this->gettext('autoreply')),
                 $input_autoresponderactive->show($settings['enabled']));
@@ -134,7 +141,7 @@ class vacation extends rcube_plugin
         // Subject
         $field_id = 'vacation_subject';
         $input_autorespondersubject = new html_inputfield(array('name' => '_vacation_subject', 'id' => $field_id, 'size' => 90));
-        $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+        $out .= sprintf("<tr><td class=\"title\"><label for=\"%s\">%s</label></td><td>%s</td></tr>\n",
                 $field_id,
                 rep_specialchars_output($this->gettext('autoreplysubject')),
                 $input_autorespondersubject->show($settings['subject']));
@@ -142,59 +149,79 @@ class vacation extends rcube_plugin
         // Out of office body
         $field_id = 'vacation_body';
         $input_autoresponderbody = new html_textarea(array('name' => '_vacation_body', 'id' => $field_id, 'cols' => 88, 'rows' => 20));
-        $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+        $out .= sprintf("<tr><td class=\"title\"><label for=\"%s\">%s</label></td><td>%s</td></tr>\n",
                 $field_id,
                 rep_specialchars_output($this->gettext('autoreplymessage')),
                 $input_autoresponderbody->show($settings['body']));
 
         /* We only use aliases for .forward and only if it's enabled in the config*/
         if ($this->v->useAliases()) {
-        $size = 0;
+            $size = 0;
 
-        // If there are no multiple identities, hide the button and add increase the size of the textfield
-        $hasMultipleIdentities = $this->v->vacation_aliases('buttoncheck');
-        if ($hasMultipleIdentities == '') $size = 15;
+            // If there are no multiple identities, hide the button and add increase the size of the textfield
+            $hasMultipleIdentities = $this->v->vacation_aliases('buttoncheck');
+            if ($hasMultipleIdentities == '') $size = 15;
 
-                $field_id = 'vacation_aliases';
-                $input_autoresponderalias = new html_inputfield(array('name' => '_vacation_aliases', 'id' => $field_id, 'size' => 75+$size));
-                $out .= '<p>' . $this->gettext('separate_alias') . '</p>';
+            $field_id = 'vacation_aliases';
+            $input_autoresponderalias = new html_inputfield(array('name' => '_vacation_aliases', 'id' => $field_id, 'size' => 75+$size));
+            $out .= '<p>' . $this->gettext('separate_alias') . '</p>';
 
             // Inputfield with button
-            $out .= sprintf('<p><label for="%s">%s</label>&nbsp;%s
-              ', $field_id, rep_specialchars_output($this->gettext('aliases')),
+            $out .= sprintf('<p><label for="%s">%s</label>&nbsp;%s', $field_id, rep_specialchars_output($this->gettext('aliases')),
                   $input_autoresponderalias->show($settings['aliases']));
-            if ($hasMultipleIdentities!='')
+            if ($hasMultipleIdentities!='') {
                 $out .= sprintf('<input type="button" id="aliaslink" class="button" value="%s"/>',
-              rep_specialchars_output($this->gettext('aliasesbutton')));
+                    rep_specialchars_output($this->gettext('aliasesbutton')));
+            }
             $out .= "</p>";
 
         }
-        $out .= '</fieldset><fieldset><legend>' . $this->gettext('forward') . '</legend>';
+        $out .= '</table></fieldset><fieldset><legend>' . $this->gettext('forward') . '</legend>';
+        $out .= '<table>';
 
-            // Keep a local copy of the mail
-            $field_id = 'vacation_keepcopy';
-            $input_localcopy = new html_checkbox(array('name' => '_vacation_keepcopy', 'id' => $field_id, 'value' => 1));
-            $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
-                    $field_id,
-                    rep_specialchars_output($this->gettext('keepcopy')),
-                    $input_localcopy->show($settings['keepcopy']));
+        // Keep a local copy of the mail
+        $field_id = 'vacation_keepcopy';
+        $input_localcopy = new html_checkbox(array('name' => '_vacation_keepcopy', 'id' => $field_id, 'value' => 1));
+        $out .= sprintf("<tr><td class=\"title\"><label for=\"%s\">%s</label></td><td>%s</td></tr>\n",
+                $field_id,
+                rep_specialchars_output($this->gettext('keepcopy')),
+                $input_localcopy->show($settings['keepcopy']));
 
         // Information on the forward in a seperate fieldset.
         if (! isset($this->inicfg['disable_forward']) || ( isset($this->inicfg['disable_forward']) && $this->inicfg['disable_forward']==false)) {
-                        $out .= '<p>' . $this->gettext('separate_forward') . '</p>';
 
             // Forward mail to another account
             $field_id = 'vacation_forward';
             $input_autoresponderforward = new html_inputfield(array('name' => '_vacation_forward', 'id' => $field_id, 'size' => 90));
-            $out .= sprintf("<p><label for=\"%s\">%s</label>&nbsp;%s</p>\n",
+            $out .= sprintf("<tr><td class=\"title\"><label for=\"%s\">%s</label></td><td>%s</td></tr>\n",
                     $field_id,
                     rep_specialchars_output($this->gettext('forwardingaddresses')),
                     $input_autoresponderforward->show($settings['forward']));
 
+            $out .= '<tr><td></td><td>' . $this->gettext('separate_forward') . '</td></tr>';
         }
-                $out .= "</fieldset>\n";
+
+        $out .= '</table>';
+        $out .= "</fieldset>\n";
+
+        $out .= html::p(null, $rcmail->output->button(array(
+            'command' => 'plugin.vacation-save',
+            'type' => 'input',
+            'class' => 'button mainaction',
+            'label' => 'save'
+        )));
+
+        $form_content = html::div(array('class' => 'box'),
+            html::div(array('id' => 'prefs-title', 'class' => 'boxtitle'), $this->gettext('vacation')) .
+            html::div(array('class' => 'boxcontent'), $out)
+        );
         $rcmail->output->add_gui_object('vacationform', 'vacation-form');
 
-        return $out;
+        return $rcmail->output->form_tag(array(
+            'id' => 'vacation-form',
+            'name' => 'vacation-form',
+            'method' => 'post',
+            'action' => './?_task=settings&_action=plugin.vacation-save',
+        ), $form_content);
     }
 }
