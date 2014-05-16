@@ -75,32 +75,29 @@ public function loadDefaults()
     // This method will be used from vacation.js as an JSON/Ajax call or directly
     final public function vacation_aliases($method=null)
     {
-        $aliases = "";
+        $aliases = array();
         $identities = $this->user->list_identities();
-        // Strip off the default identity, no need to alias that.
-        array_shift($identities);
 
         foreach ($identities as $identity) {
             // Strip domainname off. /usr/bin/vacation only deals with system users
+            $alias = array_shift(explode("@",$identity['email']));
 
-            $aliases.=array_shift(explode("@",$identity['email'])).",";
+            // Only record the alias if it is unique.
+            if ($alias != $this->user->data['username'] && !in_array($alias, $aliases)) {
+                $aliases[] = $alias;
+            }
         }
 
-        $str = substr($aliases,0,-1);
+        $str = implode($aliases, ',');
 
         // We use this method in both ftp.class.php and as Ajax callback
 
-        if (empty($identities)) {
-            // No identities found.
-//			$str = "To use aliases, add more identities.";
-        }
-
         if ($method != null) {
             return $str;
-        } else {
-            // Calls the alias_callback as defined in vacation.js
-            $this->rcmail->output->command('plugin.alias_callback',  array('aliases'=>$str));
         }
+
+        // Calls the alias_callback as defined in vacation.js
+        $this->rcmail->output->command('plugin.alias_callback',  array('aliases'=>$str));
     }
 
     /*
