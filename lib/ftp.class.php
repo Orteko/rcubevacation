@@ -79,44 +79,44 @@ class FTP extends VacationDriver
 
         $d = new DotForward;
         $d->mergeOptions($this->dotforward);
-        // Enable auto-reply?
-        if ($this->enable) {
 
-            $email = $this->identity['email'];
+        $email = $this->identity['email'];
 
-            // Set the envelop sender to the current idendity's email address
-            if (isset($this->dotforward['set_envelop_sender']) && $this->dotforward['set_envelop_sender']) {
-                $d->setOption("envelop_sender",$email);
-            }
-
-            $d->setOption("aliases",$this->aliases);
-
-            // Create the .vacation.message file
-
-            $full_name = $this->identity['name'];
-
-            if (!empty($full_name)) {
-                $vacation_header = sprintf("From: %s <%s>\n",$full_name,$email);
-            } else {
-                $vacation_header = sprintf("From: %s\n",$email);
-            }
-            $vacation_header .= sprintf("Subject: %s\n\n",$this->subject);
-            $message = $vacation_header.$this->body;
-            $this->uploadfile($message,$this->dotforward['message']);
-
+        // Set the envelop sender to the current idendity's email address
+        if (isset($this->dotforward['set_envelop_sender']) && $this->dotforward['set_envelop_sender']) {
+            $d->setOption("envelop_sender",$email);
         }
+
+        $d->setOption("aliases",$this->aliases);
+
+        // Create the .vacation.message file
+
+        $full_name = $this->identity['name'];
+
+        if (!empty($full_name)) {
+            $vacation_header = sprintf("From: %s <%s>\n",$full_name,$email);
+        } else {
+            $vacation_header = sprintf("From: %s\n",$email);
+        }
+
+        $vacation_header .= sprintf("Subject: %s\n\n",$this->subject);
+        $message = $vacation_header.$this->body;
+        $this->uploadfile($message,$this->dotforward['message']);
+
         $d->setOption("username",$this->user->data['username']);
         $d->setOption("forward",$this->forward);
-                $d->setOption("keepcopy",$this->keepcopy);
+        $d->setOption("keepcopy",$this->keepcopy);
 
         // Do we even need to upload a .forward file?
-            if (! $this->enable) { $d->setOption("binary",""); }
+        if (!$this->enable) {
+            $d->setOption("binary","");
+        }
+
         if ($this->enable || $this->forward != "") {
             $this->uploadfile($d->create(),".forward");
         }
 
         return true;
-
     }
 
     // Cleans up files
