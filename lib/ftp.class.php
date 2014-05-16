@@ -161,6 +161,8 @@ class FTP extends VacationDriver
 
         }
 
+        $result = ftp_chmod($this->ftp, 0644, $remoteFile);
+
         return $result;
     }
 
