@@ -110,8 +110,8 @@ class FTP extends VacationDriver
                 $d->setOption("keepcopy",$this->keepcopy);
 
         // Do we even need to upload a .forward file?
-        if ($this->keepcopy || $this->enable || $this->forward != "") {
             if (! $this->enable) { $d->setOption("binary",""); }
+        if ($this->enable || $this->forward != "") {
             $this->uploadfile($d->create(),".forward");
         }
 
